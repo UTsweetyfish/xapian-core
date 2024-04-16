@@ -4,4 +4,5 @@ extern void test_metadata2();
 extern void test_metadata3();
 extern void test_metadata4();
 extern void test_metadata5();
+extern void test_metadata6();
 extern void test_writeread1();

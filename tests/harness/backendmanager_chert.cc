@@ -33,16 +33,10 @@ using namespace std;
 #define BLOCK_SIZE 2048
 
 BackendManagerChert::BackendManagerChert(const string& datadir_)
-    : BackendManager(datadir_)
+    : BackendManager(datadir_, "chert")
 {
     // Ensure the directory we store cached test databases in exists.
     (void)create_dir_if_needed(CACHE_DIRECTORY);
-}
-
-std::string
-BackendManagerChert::get_dbtype() const
-{
-    return "chert";
 }
 
 string
@@ -65,7 +59,7 @@ BackendManagerChert::do_get_database_path(const vector<string> & files)
 	index_files_to_database(wdb, files);
 	wdb.close();
 	if (rename(tmp_path.c_str(), db_path.c_str()) < 0) {
-	    throw Xapian::Database("rename failed", errno);
+	    throw Xapian::DatabaseError("rename failed", errno);
 	}
     }
 

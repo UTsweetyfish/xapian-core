@@ -29,6 +29,8 @@
 #include <cerrno>
 #include <cstring>
 
+#include "safesysexits.h"
+
 #ifdef HAVE_FORK
 # include <signal.h>
 # include <sys/types.h>
@@ -184,10 +186,10 @@ try_next_port:
 		throw msg;
 	    }
 	    if (++port < 65536 && status != 0) {
-		if (WIFEXITED(status) && WEXITSTATUS(status) == 69) {
-		    // 69 is EX_UNAVAILABLE which xapian-tcpsrv exits
-		    // with if (and only if) the port specified was
-		    // in use.
+		if (WIFEXITED(status) &&
+		    WEXITSTATUS(status) == EX_UNAVAILABLE) {
+		    // Exit code EX_UNAVAILABLE from xapian-tcpsrv means the
+		    // specified port was in use.
 		    goto try_next_port;
 		}
 	    }
@@ -289,13 +291,12 @@ try_next_port:
     startupinfo.hStdInput = INVALID_HANDLE_VALUE;
     startupinfo.dwFlags |= STARTF_USESTDHANDLES;
 
-    // For some reason Windows wants a modifiable copy!
-    BOOL ok;
-    char * cmdline = strdup(cmd.c_str());
-    ok = CreateProcess(0, cmdline, 0, 0, TRUE, 0, 0, 0, &startupinfo, &procinfo);
-    free(cmdline);
-    if (!ok)
+    // For some reason Windows wants a modifiable command line string
+    // so pass a pointer to the first character rather than using c_str().
+    if (!CreateProcess(XAPIAN_TCPSRV, &cmd[0], 0, 0, TRUE, 0, 0, 0,
+		       &startupinfo, &procinfo)) {
 	win32_throw_error_string("Couldn't create child process");
+    }
 
     CloseHandle(hWrite);
     CloseHandle(procinfo.hThread);
@@ -313,10 +314,9 @@ try_next_port:
 		Sleep(100);
 	    }
 	    CloseHandle(procinfo.hProcess);
-	    if (++port < 65536 && rc == 69) {
-		// 69 is EX_UNAVAILABLE which xapian-tcpsrv exits
-		// with if (and only if) the port specified was
-		// in use.
+	    if (++port < 65536 && rc == EX_UNAVAILABLE) {
+		// Exit code EX_UNAVAILABLE from xapian-tcpsrv means the
+		// specified port was in use.
 		goto try_next_port;
 	    }
 	    string msg("Failed to get 'Listening...' from command '");
@@ -344,12 +344,6 @@ try_next_port:
 
 BackendManagerRemoteTcp::~BackendManagerRemoteTcp() {
     BackendManagerRemoteTcp::clean_up();
-}
-
-std::string
-BackendManagerRemoteTcp::get_dbtype() const
-{
-    return "remotetcp_" + sub_manager->get_dbtype();
 }
 
 Xapian::Database

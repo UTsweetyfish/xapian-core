@@ -1,20 +1,20 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.16: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.20.1: https://docutils.sourceforge.io/" />
 <title>Xapian Spelling Correction</title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7952 2016-07-26 18:15:59Z milde $
+:Id: $Id: html4css1.css 8954 2022-01-20 10:10:25Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
 
-See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+See https://docutils.sourceforge.io/docs/howto/html-stylesheets.html for how to
 customize this style sheet.
 */
 
@@ -367,33 +367,33 @@ ul.auto-toc {
 <div class="contents topic" id="table-of-contents">
 <p class="topic-title">Table of contents</p>
 <ul class="simple">
-<li><a class="reference internal" href="#introduction" id="id1">Introduction</a></li>
-<li><a class="reference internal" href="#indexing" id="id2">Indexing</a><ul>
-<li><a class="reference internal" href="#static-spelling-data" id="id3">Static spelling data</a></li>
-<li><a class="reference internal" href="#dynamic-spelling-data" id="id4">Dynamic spelling data</a></li>
+<li><a class="reference internal" href="#introduction" id="toc-entry-1">Introduction</a></li>
+<li><a class="reference internal" href="#indexing" id="toc-entry-2">Indexing</a><ul>
+<li><a class="reference internal" href="#static-spelling-data" id="toc-entry-3">Static spelling data</a></li>
+<li><a class="reference internal" href="#dynamic-spelling-data" id="toc-entry-4">Dynamic spelling data</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#searching" id="id5">Searching</a><ul>
-<li><a class="reference internal" href="#queryparser-integration" id="id6">QueryParser Integration</a></li>
+<li><a class="reference internal" href="#searching" id="toc-entry-5">Searching</a><ul>
+<li><a class="reference internal" href="#queryparser-integration" id="toc-entry-6">QueryParser Integration</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#omega" id="id7">Omega</a></li>
-<li><a class="reference internal" href="#algorithm" id="id8">Algorithm</a><ul>
-<li><a class="reference internal" href="#unicode-support" id="id9">Unicode Support</a></li>
+<li><a class="reference internal" href="#omega" id="toc-entry-7">Omega</a></li>
+<li><a class="reference internal" href="#algorithm" id="toc-entry-8">Algorithm</a><ul>
+<li><a class="reference internal" href="#unicode-support" id="toc-entry-9">Unicode Support</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#current-limitations" id="id10">Current Limitations</a><ul>
-<li><a class="reference internal" href="#exactness" id="id11">Exactness</a></li>
-<li><a class="reference internal" href="#backend-support" id="id12">Backend Support</a></li>
-<li><a class="reference internal" href="#prefixed-terms" id="id13">Prefixed Terms</a></li>
-<li><a class="reference internal" href="#queryparser-changed-word-locations" id="id14">QueryParser changed word locations</a></li>
+<li><a class="reference internal" href="#current-limitations" id="toc-entry-10">Current Limitations</a><ul>
+<li><a class="reference internal" href="#exactness" id="toc-entry-11">Exactness</a></li>
+<li><a class="reference internal" href="#backend-support" id="toc-entry-12">Backend Support</a></li>
+<li><a class="reference internal" href="#prefixed-terms" id="toc-entry-13">Prefixed Terms</a></li>
+<li><a class="reference internal" href="#queryparser-changed-word-locations" id="toc-entry-14">QueryParser changed word locations</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#references" id="id15">References</a></li>
+<li><a class="reference internal" href="#references" id="toc-entry-15">References</a></li>
 </ul>
 </div>
 <div class="section" id="introduction">
-<h1><a class="toc-backref" href="#id1">Introduction</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-1">Introduction</a></h1>
 <p>Xapian provides functionality which can suggest corrections for misspelled
 words in queries, or in other situations where it might be useful.  The
 suggestions can be generated dynamically from the data that has been indexed,
@@ -401,11 +401,11 @@ so the correction facility isn't tied to particular languages, and can suggest
 proper nouns or specialist technical terms.</p>
 </div>
 <div class="section" id="indexing">
-<h1><a class="toc-backref" href="#id2">Indexing</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-2">Indexing</a></h1>
 <p>The spelling dictionary can be built with words from indexed text, or by adding
 words from a static word list, or a combination of the two.</p>
 <div class="section" id="static-spelling-data">
-<h2><a class="toc-backref" href="#id3">Static spelling data</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-3">Static spelling data</a></h2>
 <p>If <tt class="docutils literal">db</tt> is a Xapian::WritableDatabase, you can add to the spelling dictionary
 using:</p>
 <pre class="literal-block">
@@ -421,7 +421,7 @@ decrement the frequency of a word by more than its current value, it's just
 removed.</p>
 </div>
 <div class="section" id="dynamic-spelling-data">
-<h2><a class="toc-backref" href="#id4">Dynamic spelling data</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-4">Dynamic spelling data</a></h2>
 <p><tt class="docutils literal"><span class="pre">Xapian::TermGenerator</span></tt> can be configured to automatically add words from
 indexed documents to the spelling dictionary:</p>
 <pre class="literal-block">
@@ -444,9 +444,9 @@ unstemmed) and call <tt class="docutils literal">remove_spelling()</tt> for each
 </div>
 </div>
 <div class="section" id="searching">
-<h1><a class="toc-backref" href="#id5">Searching</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-5">Searching</a></h1>
 <div class="section" id="queryparser-integration">
-<h2><a class="toc-backref" href="#id6">QueryParser Integration</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-6">QueryParser Integration</a></h2>
 <p>If FLAG_SPELLING_CORRECTION is passed to QueryParser::parse_query() and
 QueryParser::set_database() has been called, the QueryParser will look for
 corrections for words in the query.  In Xapian 1.2.2 and earlier, it only
@@ -460,13 +460,13 @@ QueryParser::parse_query() on it.</p>
 </div>
 </div>
 <div class="section" id="omega">
-<h1><a class="toc-backref" href="#id7">Omega</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-7">Omega</a></h1>
 <p>As of Omega 1.1.1, omindex and scriptindex support indexing spelling correction
 data and omega supports suggesting corrected spellings at search time.  See the
 <a class="reference external" href="https://xapian.org/docs/omega/">Omega documentation</a> for more details.</p>
 </div>
 <div class="section" id="algorithm">
-<h1><a class="toc-backref" href="#id8">Algorithm</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-8">Algorithm</a></h1>
 <p>A list of candidate words is generated by matching trigrams (groups of 3
 adjacent characters) in the candidates against those in the misspelled
 word.  As well as groups of adjacent characters, &quot;starts&quot; and &quot;ends&quot;
@@ -505,7 +505,7 @@ to Xapian::Database::get_spelling_suggestion().  If not specified, the default
 is 2, which generally does a good job.  3 is also a reasonable choice in many
 cases.  For most uses, 1 is probably too low, and 4 or more probably too high.</p>
 <div class="section" id="unicode-support">
-<h2><a class="toc-backref" href="#id9">Unicode Support</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-9">Unicode Support</a></h2>
 <p>Trigrams are generated at the byte level, but the edit distance calculation
 currently works with Unicode characters, so get_spelling_suggestion() should
 suggest suitable spelling corrections respecting the specified (or default)
@@ -513,9 +513,9 @@ edit distance threshold.</p>
 </div>
 </div>
 <div class="section" id="current-limitations">
-<h1><a class="toc-backref" href="#id10">Current Limitations</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-10">Current Limitations</a></h1>
 <div class="section" id="exactness">
-<h2><a class="toc-backref" href="#id11">Exactness</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-11">Exactness</a></h2>
 <p>Because Xapian only tests the edit distance for terms which match
 well (or at all!) on trigrams, it may not always suggest the same answer that
 would be found if all possible words were checked using the edit distance
@@ -523,7 +523,7 @@ algorithm.  However, the best answer will usually be found, and an exhaustive
 search would be prohibitively expensive for many uses.</p>
 </div>
 <div class="section" id="backend-support">
-<h2><a class="toc-backref" href="#id12">Backend Support</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-12">Backend Support</a></h2>
 <p>Currently spelling correction is supported by glass and chert
 databases.  It works with a single database or multiple databases (use
 Database::add_database() as usual).  We've no plans to support it for the
@@ -531,18 +531,18 @@ InMemory backend, but we do intend to support it for
 the remote backend in the future.</p>
 </div>
 <div class="section" id="prefixed-terms">
-<h2><a class="toc-backref" href="#id13">Prefixed Terms</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-13">Prefixed Terms</a></h2>
 <p>Currently spelling correction ignores prefixed terms.</p>
 </div>
 <div class="section" id="queryparser-changed-word-locations">
-<h2><a class="toc-backref" href="#id14">QueryParser changed word locations</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-14">QueryParser changed word locations</a></h2>
 <p>The QueryParser doesn't currently report the locations of changed words in
 the query string, so it's a bit fiddly to mark up the altered words specially
 in HTML output, for example.</p>
 </div>
 </div>
 <div class="section" id="references">
-<h1><a class="toc-backref" href="#id15">References</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-15">References</a></h1>
 <p>The algorithm used to calculate the edit distance is based on that described in
 the paper &quot;An extension of Ukkonen's enhanced dynamic programming ASM
 algorithm&quot; by Hal Berghel, University of Arkansas, and David Roach, Acxiom

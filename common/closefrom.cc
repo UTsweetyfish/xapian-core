@@ -66,10 +66,11 @@ get_maxfd() {
 }
 
 // These platforms are known to provide closefrom():
-// FreeBSD >= 8.0, NetBSD >= 3.0, OpenBSD >= 3.5, Solaris >= 9
+// FreeBSD >= 8.0, NetBSD >= 3.0, OpenBSD >= 3.5, Solaris >= 9,
+// Linux >= 5.9 with glibc >= 2.34
 //
 // These platforms are known to support fcntl() with F_CLOSEM:
-// AIX, IRIX, NetBSD >= 2.0
+// AIX, NetBSD >= 2.0
 //
 // These platforms have getdirentries() and a "magic" directory with an entry
 // for each FD open in the current process:
@@ -77,7 +78,7 @@ get_maxfd() {
 //
 // These platforms have getdirentriesattr() and a "magic" directory with an
 // entry for each FD open in the current process:
-// OS X
+// macOS
 //
 // Other platforms just use a loop up to a limit obtained from
 // fcntl(0, F_MAXFD), getrlimit(RLIMIT_NOFILE, ...), or sysconf(_SC_OPEN_MAX)
@@ -152,7 +153,7 @@ Xapian::Internal::closefrom(int fd)
 	}
 	close(dir);
     }
-#elif defined __APPLE__ // Mac OS X
+#elif defined __APPLE__ // macOS
     const char* path = "/dev/fd";
 #ifdef __LP64__
     typedef unsigned int gdea_type;

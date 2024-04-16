@@ -1,20 +1,20 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.16: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.20.1: https://docutils.sourceforge.io/" />
 <title>Serialisation of Queries and Documents</title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7952 2016-07-26 18:15:59Z milde $
+:Id: $Id: html4css1.css 8954 2022-01-20 10:10:25Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
 
-See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+See https://docutils.sourceforge.io/docs/howto/html-stylesheets.html for how to
 customize this style sheet.
 */
 
@@ -368,13 +368,13 @@ ul.auto-toc {
 <div class="contents topic" id="table-of-contents">
 <p class="topic-title">Table of contents</p>
 <ul class="simple">
-<li><a class="reference internal" href="#introduction" id="id1">Introduction</a></li>
-<li><a class="reference internal" href="#serialising-documents" id="id2">Serialising Documents</a></li>
-<li><a class="reference internal" href="#serialising-queries" id="id3">Serialising Queries</a></li>
+<li><a class="reference internal" href="#introduction" id="toc-entry-1">Introduction</a></li>
+<li><a class="reference internal" href="#serialising-documents" id="toc-entry-2">Serialising Documents</a></li>
+<li><a class="reference internal" href="#serialising-queries" id="toc-entry-3">Serialising Queries</a></li>
 </ul>
 </div>
 <div class="section" id="introduction">
-<h1><a class="toc-backref" href="#id1">Introduction</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-1">Introduction</a></h1>
 <p>In order to pass Query and Document objects to or from remote databases, Xapian
 includes support for serialising these objects to strings, and then converting
 these strings back into objects.  This support may be accessed directly, and
@@ -383,7 +383,7 @@ used for storing persistent representations of Query and Document objects.</p>
 releases.  This will be clearly noted in the release notes.</p>
 </div>
 <div class="section" id="serialising-documents">
-<h1><a class="toc-backref" href="#id2">Serialising Documents</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-2">Serialising Documents</a></h1>
 <p>To get a serialised document, simply call the <tt class="docutils literal"><span class="pre">Document::serialise()</span></tt> method
 on the instance of the document:</p>
 <pre class="literal-block">
@@ -401,7 +401,7 @@ static Document unserialise(const std::string &amp;s);
 </pre>
 </div>
 <div class="section" id="serialising-queries">
-<h1><a class="toc-backref" href="#id3">Serialising Queries</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-3">Serialising Queries</a></h1>
 <p>Serialisation of queries is very similar to serialisation of documents: there
 is a <tt class="docutils literal"><span class="pre">Query::serialise()</span></tt> method to produce a serialised Query, and a
 corresponding <tt class="docutils literal"><span class="pre">Query::unserialise()</span></tt> method to produce a Query from a

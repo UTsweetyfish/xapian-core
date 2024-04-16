@@ -190,20 +190,14 @@ Xapian::sortable_unserialise(const std::string & value) XAPIAN_NOEXCEPT
     // Positive infinity.
     if (value.size() == 9 &&
 	memcmp(value.data(), "\xff\xff\xff\xff\xff\xff\xff\xff\xff", 9) == 0) {
-#ifdef INFINITY
-	// INFINITY is C99.  Oddly, it's of type "float" so sanity check in
-	// case it doesn't cast to double as infinity (apparently some
-	// implementations have this problem).
-	if (double(INFINITY) > HUGE_VAL) return INFINITY;
-#endif
+	// "On implementations that support floating-point infinities,
+	// [HUGE_VAL] always expand[s] to the positive infinit[y] of double"
+	// https://en.cppreference.com/w/cpp/numeric/math/HUGE_VAL
 	return HUGE_VAL;
     }
 
     // Negative infinity.
     if (value.empty()) {
-#ifdef INFINITY
-	if (double(INFINITY) > HUGE_VAL) return -INFINITY;
-#endif
 	return -HUGE_VAL;
     }
 
@@ -260,6 +254,8 @@ Xapian::sortable_unserialise(const std::string & value) XAPIAN_NOEXCEPT
 
     // We use scalbn() since it's equivalent to ldexp() when FLT_RADIX == 2
     // (which we currently assume), except that ldexp() will set errno if the
-    // result overflows or underflows, which isn't really desirable here.
+    // result overflows or underflows.  We don't need or want errno set (indeed
+    // configure turns on -fno-math-errno if it detects the compiler supports
+    // it).
     return scalbn(mantissa, exponent);
 }

@@ -34,3 +34,4 @@ extern void test_lazytablebug1();
 extern void test_cursordelbug1();
 extern void test_modifyvalues1();
 extern void test_protocolbug1();
+extern void test_remotefdleak1();

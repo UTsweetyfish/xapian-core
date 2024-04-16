@@ -3,7 +3,10 @@
     if (!(properties&BACKEND)) {
 	static const test_desc tests[] = {
 	    { "stubdb7", test_stubdb7 },
+	    { "getrevision2", test_getrevision2 },
+	    { "unsupportedcheck3", test_unsupportedcheck3 },
 	    { "stubdb4", test_stubdb4 },
+	    { "databasenotfounderror2", test_databasenotfounderror2 },
 	    { "defaultctor1", test_defaultctor1 },
 	    { "copyassign1", test_copyassign1 },
 	    { "latlongcoords1", test_latlongcoords1 },
@@ -12,14 +15,12 @@
 	    { "latlongkeymaker1", test_latlongkeymaker1 },
 	    { "matchspy6", test_matchspy6 },
 	    { "matchspy7", test_matchspy7 },
-	    { "trivial1", test_trivial1 },
 	    { "getqterms1", test_getqterms1 },
 	    { "getqterms2", test_getqterms2 },
 	    { "emptyquery2", test_emptyquery2 },
 	    { "emptyquery3", test_emptyquery3 },
 	    { "querylen1", test_querylen1 },
 	    { "querylen2", test_querylen2 },
-	    { "queryvalid1", test_queryvalid1 },
 	    { "dontflattensubqueries1", test_dontflattensubqueries1 },
 	    { "emptyquerypart1", test_emptyquerypart1 },
 	    { "stemlangs1", test_stemlangs1 },
@@ -99,6 +100,7 @@
 	    { "qp_default_op3", test_qp_default_op3 },
 	    { "qp_defaultstrategysome1", test_qp_defaultstrategysome1 },
 	    { "qp_stemsomefullpos", test_qp_stemsomefullpos },
+	    { "qp_nopos", test_qp_nopos },
 	    { "querypairwise1", test_querypairwise1 },
 	    { "serialise_document1", test_serialise_document1 },
 	    { "serialise_query1", test_serialise_query1 },
@@ -156,6 +158,13 @@
 	};
 	result = max(result, test_driver::run(tests));
     }
+    if (((properties&SPELLING)||(properties&REMOTE))&&(properties&WRITABLE)) {
+	static const test_desc tests[] = {
+	    { "spell0", test_spell0 },
+	    { 0, 0 }
+	};
+	result = max(result, test_driver::run(tests));
+    }
     if ((properties&BACKEND)) {
 	static const test_desc tests[] = {
 	    { "zerodocid1", test_zerodocid1 },
@@ -195,10 +204,7 @@
 	    { "absentterm2", test_absentterm2 },
 	    { "rset1", test_rset1 },
 	    { "rset2", test_rset2 },
-	    { "eliteset1", test_eliteset1 },
-	    { "eliteset2", test_eliteset2 },
 	    { "eliteset3", test_eliteset3 },
-	    { "eliteset4", test_eliteset4 },
 	    { "eliteset5", test_eliteset5 },
 	    { "termlisttermfreq1", test_termlisttermfreq1 },
 	    { "qterminfo1", test_qterminfo1 },
@@ -222,6 +228,7 @@
 	    { "checkatleast3", test_checkatleast3 },
 	    { "allpostlist1", test_allpostlist1 },
 	    { "emptyterm1", test_emptyterm1 },
+	    { "alldocspl1", test_alldocspl1 },
 	    { "scaleweight1", test_scaleweight1 },
 	    { "scaleweight2", test_scaleweight2 },
 	    { "bm25weight1", test_bm25weight1 },
@@ -230,6 +237,12 @@
 	    { "dbstats1", test_dbstats1 },
 	    { "dbstats2", test_dbstats2 },
 	    { "alldocspl3", test_alldocspl3 },
+	    { "msize1", test_msize1 },
+	    { "msize2", test_msize2 },
+	    { "xordecay1", test_xordecay1 },
+	    { "ordecay1", test_ordecay1 },
+	    { "ordecay2", test_ordecay2 },
+	    { "orcheck1", test_orcheck1 },
 	    { "msetfirst2", test_msetfirst2 },
 	    { "bm25weight2", test_bm25weight2 },
 	    { "unigramlmweight2", test_unigramlmweight2 },
@@ -243,8 +256,12 @@
 	    { "exactxor1", test_exactxor1 },
 	    { "getdocumentlazy1", test_getdocumentlazy1 },
 	    { "getdocumentlazy2", test_getdocumentlazy2 },
+	    { "getuniqueterms1", test_getuniqueterms1 },
+	    { "nopositionbug1", test_nopositionbug1 },
 	    { "checkatleast4", test_checkatleast4 },
 	    { "multidb1", test_multidb1 },
+	    { "allterms7", test_allterms7 },
+	    { "nosuchterm", test_nosuchterm },
 	    { "closedb1", test_closedb1 },
 	    { "closedb3", test_closedb3 },
 	    { "collapsekey5", test_collapsekey5 },
@@ -275,7 +292,10 @@
 	    { "collfreq1", test_collfreq1 },
 	    { "sortvalue1", test_sortvalue1 },
 	    { "sortrel1", test_sortrel1 },
+	    { "netstats1", test_netstats1 },
 	    { "matchall1", test_matchall1 },
+	    { "matchspy2", test_matchspy2 },
+	    { "matchspy4", test_matchspy4 },
 	    { "matchspy5", test_matchspy5 },
 	    { "subclassablerefcount3", test_subclassablerefcount3 },
 	    { "subclassablerefcount6", test_subclassablerefcount6 },
@@ -286,6 +306,10 @@
 	    { "synonym4", test_synonym4 },
 	    { "opmax1", test_opmax1 },
 	    { "valuerange1", test_valuerange1 },
+	    { "valuerange2", test_valuerange2 },
+	    { "valuerange5", test_valuerange5 },
+	    { "valuerange6", test_valuerange6 },
+	    { "valuerange7", test_valuerange7 },
 	    { "valuege1", test_valuege1 },
 	    { "valuege2", test_valuege2 },
 	    { "valuele1", test_valuele1 },
@@ -299,8 +323,10 @@
 	    { "topercent4", test_topercent4 },
 	    { "topercent5", test_topercent5 },
 	    { "topercent6", test_topercent6 },
+	    { "topercent7", test_topercent7 },
 	    { "valueweightsource1", test_valueweightsource1 },
 	    { "fixedweightsource1", test_fixedweightsource1 },
+	    { "possubqueries1", test_possubqueries1 },
 	    { "xor3", test_xor3 },
 	    { "phrasealldocs1", test_phrasealldocs1 },
 	    { "wildcard1", test_wildcard1 },
@@ -315,6 +341,7 @@
 	    { "zeroestimate1", test_zeroestimate1 },
 	    { "complexphrase3", test_complexphrase3 },
 	    { "complexnear3", test_complexnear3 },
+	    { "subdbwithoutpos1", test_subdbwithoutpos1 },
 	    { "notandor1", test_notandor1 },
 	    { "boolorbug1", test_boolorbug1 },
 	    { "hoistnotbug1", test_hoistnotbug1 },
@@ -322,19 +349,31 @@
 	    { "emptymaybe1", test_emptymaybe1 },
 	    { "phraseweightcheckbug1", test_phraseweightcheckbug1 },
 	    { "orphanedhint1", test_orphanedhint1 },
+	    { "qp_flag_wildcard1", test_qp_flag_wildcard1 },
+	    { "qp_flag_wildcard2", test_qp_flag_wildcard2 },
+	    { "qp_flag_wildcard3", test_qp_flag_wildcard3 },
+	    { "qp_flag_partial1", test_qp_flag_partial1 },
 	    { "wildquery1", test_wildquery1 },
+	    { "qp_value_range3", test_qp_value_range3 },
+	    { "qp_range3", test_qp_range3 },
+	    { "qp_stopword_group1", test_qp_stopword_group1 },
+	    { "serialise_document2", test_serialise_document2 },
 	    { "snippet1", test_snippet1 },
 	    { "snippetstem1", test_snippetstem1 },
 	    { "snippetphrase1", test_snippetphrase1 },
+	    { "snippetmisc1", test_snippetmisc1 },
 	    { "snippet_termcover1", test_snippet_termcover1 },
 	    { "snippet_termcover2", test_snippet_termcover2 },
 	    { "snippet_empty", test_snippet_empty },
 	    { "snippet_start_nonspace", test_snippet_start_nonspace },
 	    { "snippet_small_zerolength", test_snippet_small_zerolength },
+	    { "snippet_ngrams", test_snippet_ngrams },
 	    { "snippet_empty_mset", test_snippet_empty_mset },
+	    { "valuestream1", test_valuestream1 },
 	    { "valuestream2", test_valuestream2 },
 	    { "valuestream3", test_valuestream3 },
 	    { "valuemapsource1", test_valuemapsource1 },
+	    { "decvalwtsource3", test_decvalwtsource3 },
 	    { "bm25weight4", test_bm25weight4 },
 	    { "bm25weight5", test_bm25weight5 },
 	    { "bm25plusweight2", test_bm25plusweight2 },
@@ -345,31 +384,36 @@
 	    { "bb2weight3", test_bb2weight3 },
 	    { "bb2weight4", test_bb2weight4 },
 	    { "dlhweight1", test_dlhweight1 },
+	    { "dlhweight3", test_dlhweight3 },
 	    { "pl2weight3", test_pl2weight3 },
 	    { "pl2plusweight4", test_pl2plusweight4 },
 	    { "pl2plusweight5", test_pl2plusweight5 },
 	    { "dphweight1", test_dphweight1 },
+	    { "dphweight3", test_dphweight3 },
 	    { "tfidfweight3", test_tfidfweight3 },
 	    { "unigramlmweight4", test_unigramlmweight4 },
 	    { "unigramlmweight5", test_unigramlmweight5 },
 	    { "unigramlmweight7", test_unigramlmweight7 },
 	    { "unigramlmweight8", test_unigramlmweight8 },
 	    { "coordweight1", test_coordweight1 },
+	    { "phraseorneartoand1", test_phraseorneartoand1 },
+	    { "longpositionlist1", test_longpositionlist1 },
+	    { "consistency2", test_consistency2 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
     }
     if ((properties&BACKEND)&&!(properties&MULTI)) {
 	static const test_desc tests[] = {
-	    { "multidb3", test_multidb3 },
-	    { "multidb4", test_multidb4 },
-	    { "multidb5", test_multidb5 },
+	    { "multidb2", test_multidb2 },
 	    { "rsetmultidb1", test_rsetmultidb1 },
 	    { "rsetmultidb3", test_rsetmultidb3 },
+	    { "eliteset1", test_eliteset1 },
+	    { "eliteset2", test_eliteset2 },
+	    { "eliteset4", test_eliteset4 },
 	    { "uuid1", test_uuid1 },
 	    { "rsetmultidb2", test_rsetmultidb2 },
 	    { "multiexpand1", test_multiexpand1 },
-	    { "valuestream1", test_valuestream1 },
 	    { "valuemapsource2", test_valuemapsource2 },
 	    { "decvalwtsource4", test_decvalwtsource4 },
 	    { 0, 0 }
@@ -395,12 +439,21 @@
 	    { "matchspy1", test_matchspy1 },
 	    { "checkzeromaxpartopt1", test_checkzeromaxpartopt1 },
 	    { "externalsource4", test_externalsource4 },
+	    { "matchtimelimit1", test_matchtimelimit1 },
 	    { "postingsourcebounds1", test_postingsourcebounds1 },
 	    { "sortfunctor1", test_sortfunctor1 },
+	    { "sortfunctor2", test_sortfunctor2 },
 	    { "changesorter1", test_changesorter1 },
 	    { "sortfunctorempty1", test_sortfunctorempty1 },
 	    { "checkstatsweight1", test_checkstatsweight1 },
 	    { "checkstatsweight2", test_checkstatsweight2 },
+	    { 0, 0 }
+	};
+	result = max(result, test_driver::run(tests));
+    }
+    if ((properties&BACKEND)&&!(properties&REMOTE)&&!(properties&INMEMORY)) {
+	static const test_desc tests[] = {
+	    { "latlongpostingsource1", test_latlongpostingsource1 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
@@ -432,6 +485,20 @@
 	};
 	result = max(result, test_driver::run(tests));
     }
+    if ((properties&CHECK)) {
+	static const test_desc tests[] = {
+	    { "freelistleak1", test_freelistleak1 },
+	    { 0, 0 }
+	};
+	result = max(result, test_driver::run(tests));
+    }
+    if ((properties&CHECK)&&(properties&PATH)) {
+	static const test_desc tests[] = {
+	    { "stubdb1", test_stubdb1 },
+	    { 0, 0 }
+	};
+	result = max(result, test_driver::run(tests));
+    }
     if ((properties&CHERT)) {
 	static const test_desc tests[] = {
 	    { "chertdatabasenotfounderror1", test_chertdatabasenotfounderror1 },
@@ -452,10 +519,7 @@
 	    { "failedreplace2", test_failedreplace2 },
 	    { "blocksize1", test_blocksize1 },
 	    { "readonlyparentdir1", test_readonlyparentdir1 },
-	    { "dbfilefd012", test_dbfilefd012 },
-	    { "cursorbug1", test_cursorbug1 },
 	    { "getrevision1", test_getrevision1 },
-	    { "lazytablebug1", test_lazytablebug1 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
@@ -463,17 +527,25 @@
     if ((properties&COMPACT)) {
 	static const test_desc tests[] = {
 	    { "compactmerge1", test_compactmerge1 },
+	    { "compactmultichunks1", test_compactmultichunks1 },
 	    { "compactstub1", test_compactstub1 },
 	    { "compactstub2", test_compactstub2 },
 	    { "compactstub3", test_compactstub3 },
 	    { "compactstub4", test_compactstub4 },
+	    { "compactmissingtables1", test_compactmissingtables1 },
+	    { "compactmergesynonym1", test_compactmergesynonym1 },
 	    { "compactempty1", test_compactempty1 },
+	    { "compactmultipass1", test_compactmultipass1 },
 	    { "compactoldmerge1", test_compactoldmerge1 },
+	    { "compactoldmultichunks1", test_compactoldmultichunks1 },
 	    { "compactoldstub1", test_compactoldstub1 },
 	    { "compactoldstub2", test_compactoldstub2 },
 	    { "compactoldstub3", test_compactoldstub3 },
 	    { "compactoldstub4", test_compactoldstub4 },
+	    { "compactoldmissingtables1", test_compactoldmissingtables1 },
+	    { "compactoldmergesynonym1", test_compactoldmergesynonym1 },
 	    { "compactoldempty1", test_compactoldempty1 },
+	    { "compactoldmultipass1", test_compactoldmultipass1 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
@@ -486,21 +558,7 @@
 	};
 	result = max(result, test_driver::run(tests));
     }
-    if ((properties&COMPACT)&&(properties&GENERATED)) {
-	static const test_desc tests[] = {
-	    { "compactmultichunks1", test_compactmultichunks1 },
-	    { "compactmissingtables1", test_compactmissingtables1 },
-	    { "compactmergesynonym1", test_compactmergesynonym1 },
-	    { "compactmultipass1", test_compactmultipass1 },
-	    { "compactoldmultichunks1", test_compactoldmultichunks1 },
-	    { "compactoldmissingtables1", test_compactoldmissingtables1 },
-	    { "compactoldmergesynonym1", test_compactoldmergesynonym1 },
-	    { "compactoldmultipass1", test_compactoldmultipass1 },
-	    { 0, 0 }
-	};
-	result = max(result, test_driver::run(tests));
-    }
-    if ((properties&COMPACT)&&(properties&GENERATED)&&!(properties&MULTI)) {
+    if ((properties&COMPACT)&&!(properties&MULTI)) {
 	static const test_desc tests[] = {
 	    { "compactnorenumber1", test_compactnorenumber1 },
 	    { "compactoldnorenumber1", test_compactoldnorenumber1 },
@@ -522,57 +580,10 @@
 	};
 	result = max(result, test_driver::run(tests));
     }
-    if ((properties&GENERATED)) {
-	static const test_desc tests[] = {
-	    { "msize1", test_msize1 },
-	    { "msize2", test_msize2 },
-	    { "xordecay1", test_xordecay1 },
-	    { "ordecay1", test_ordecay1 },
-	    { "ordecay2", test_ordecay2 },
-	    { "orcheck1", test_orcheck1 },
-	    { "getuniqueterms1", test_getuniqueterms1 },
-	    { "nopositionbug1", test_nopositionbug1 },
-	    { "netstats1", test_netstats1 },
-	    { "matchspy2", test_matchspy2 },
-	    { "matchspy4", test_matchspy4 },
-	    { "valuerange5", test_valuerange5 },
-	    { "valuerange6", test_valuerange6 },
-	    { "valuerange7", test_valuerange7 },
-	    { "topercent7", test_topercent7 },
-	    { "subdbwithoutpos1", test_subdbwithoutpos1 },
-	    { "snippetmisc1", test_snippetmisc1 },
-	    { "snippet_cjkngrams", test_snippet_cjkngrams },
-	    { "dlhweight3", test_dlhweight3 },
-	    { "dphweight3", test_dphweight3 },
-	    { 0, 0 }
-	};
-	result = max(result, test_driver::run(tests));
-    }
-    if ((properties&GENERATED)&&!(properties&REMOTE)) {
-	static const test_desc tests[] = {
-	    { "matchtimelimit1", test_matchtimelimit1 },
-	    { 0, 0 }
-	};
-	result = max(result, test_driver::run(tests));
-    }
-    if ((properties&GENERATED)&&!(properties&REMOTE)&&!(properties&INMEMORY)) {
-	static const test_desc tests[] = {
-	    { "latlongpostingsource1", test_latlongpostingsource1 },
-	    { 0, 0 }
-	};
-	result = max(result, test_driver::run(tests));
-    }
-    if ((properties&GENERATED)&&(properties&POSITIONAL)) {
-	static const test_desc tests[] = {
-	    { "phrasebug1", test_phrasebug1 },
-	    { 0, 0 }
-	};
-	result = max(result, test_driver::run(tests));
-    }
     if ((properties&GLASS)) {
 	static const test_desc tests[] = {
 	    { "notermlist1", test_notermlist1 },
-	    { "getrevision2", test_getrevision2 },
+	    { "corruptglass1", test_corruptglass1 },
 	    { "glassdatabasenotfounderror1", test_glassdatabasenotfounderror1 },
 	    { 0, 0 }
 	};
@@ -581,6 +592,7 @@
     if ((properties&INMEMORY)) {
 	static const test_desc tests[] = {
 	    { "testlock3", test_testlock3 },
+	    { "unsupportedcheck2", test_unsupportedcheck2 },
 	    { "stubdb6", test_stubdb6 },
 	    { "stubdb8", test_stubdb8 },
 	    { 0, 0 }
@@ -589,15 +601,33 @@
     }
     if ((properties&METADATA)) {
 	static const test_desc tests[] = {
-	    { "metadata3", test_metadata3 },
+	    { "metadata1", test_metadata1 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
     }
-    if ((properties&METADATA)&&!(properties&INMEMORY)) {
+    if ((properties&METADATA)&&(properties&WRITABLE)) {
 	static const test_desc tests[] = {
 	    { "metadata2", test_metadata2 },
 	    { "metadata4", test_metadata4 },
+	    { "writeread1", test_writeread1 },
+	    { 0, 0 }
+	};
+	result = max(result, test_driver::run(tests));
+    }
+    if ((properties&METADATA)&&(properties&WRITABLE)&&!(properties&INMEMORY)) {
+	static const test_desc tests[] = {
+	    { "metadata3", test_metadata3 },
+	    { "metadata5", test_metadata5 },
+	    { 0, 0 }
+	};
+	result = max(result, test_driver::run(tests));
+    }
+    if ((properties&MULTI)) {
+	static const test_desc tests[] = {
+	    { "elitesetmulti1", test_elitesetmulti1 },
+	    { "elitesetmulti2", test_elitesetmulti2 },
+	    { "elitesetmulti4", test_elitesetmulti4 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
@@ -611,7 +641,7 @@
     }
     if ((properties&PATH)) {
 	static const test_desc tests[] = {
-	    { "stubdb1", test_stubdb1 },
+	    { "unsupportedcheck1", test_unsupportedcheck1 },
 	    { "stubdb2", test_stubdb2 },
 	    { "stubdb3", test_stubdb3 },
 	    { "stubdb5", test_stubdb5 },
@@ -623,6 +653,7 @@
     if ((properties&POSITIONAL)) {
 	static const test_desc tests[] = {
 	    { "phrase3", test_phrase3 },
+	    { "phrasebug1", test_phrasebug1 },
 	    { "near1", test_near1 },
 	    { "near2", test_near2 },
 	    { "phrase1", test_phrase1 },
@@ -656,6 +687,7 @@
     if ((properties&REMOTE)&&(properties&WRITABLE)) {
 	static const test_desc tests[] = {
 	    { "protocolbug1", test_protocolbug1 },
+	    { "remotefdleak1", test_remotefdleak1 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
@@ -686,23 +718,21 @@
 	    { "qp_spell2", test_qp_spell2 },
 	    { "qp_spellwild1", test_qp_spellwild1 },
 	    { "qp_spellpartial1", test_qp_spellpartial1 },
-	    { "qp_synonym1", test_qp_synonym1 },
-	    { "spell1", test_spell1 },
-	    { "spell2", test_spell2 },
 	    { "spell3", test_spell3 },
 	    { "spell4", test_spell4 },
 	    { "spell5", test_spell5 },
-	    { "spell6", test_spell6 },
 	    { "spell7", test_spell7 },
 	    { "spell8", test_spell8 },
-	    { "tg_spell1", test_tg_spell1 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
     }
-    if ((properties&SPELLING)||(properties&REMOTE)) {
+    if ((properties&SPELLING)&&(properties&WRITABLE)) {
 	static const test_desc tests[] = {
-	    { "spell0", test_spell0 },
+	    { "spell1", test_spell1 },
+	    { "spell2", test_spell2 },
+	    { "spell6", test_spell6 },
+	    { "tg_spell1", test_tg_spell1 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
@@ -710,9 +740,10 @@
     if ((properties&SYNONYMS)) {
 	static const test_desc tests[] = {
 	    { "qpsynonympartial1", test_qpsynonympartial1 },
+	    { "qp_synonym1", test_qp_synonym1 },
 	    { "qp_synonym2", test_qp_synonym2 },
 	    { "qp_synonym3", test_qp_synonym3 },
-	    { "qp_scale1", test_qp_scale1 },
+	    { "lazytablebug1", test_lazytablebug1 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
@@ -724,13 +755,6 @@
 	    { "committransaction1", test_committransaction1 },
 	    { "canceltransaction1", test_canceltransaction1 },
 	    { "canceltransaction2", test_canceltransaction2 },
-	    { 0, 0 }
-	};
-	result = max(result, test_driver::run(tests));
-    }
-    if ((properties&TRANSACTIONS)&&!(properties&REMOTE)) {
-	static const test_desc tests[] = {
-	    { "nodocs1", test_nodocs1 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
@@ -753,21 +777,15 @@
     if ((properties&VALUESTATS)) {
 	static const test_desc tests[] = {
 	    { "valueweightsource2", test_valueweightsource2 },
-	    { "valuestats3", test_valuestats3 },
-	    { 0, 0 }
-	};
-	result = max(result, test_driver::run(tests));
-    }
-    if ((properties&VALUESTATS)&&!(properties&MULTI)) {
-	static const test_desc tests[] = {
 	    { "valueweightsource3", test_valueweightsource3 },
+	    { "valuestats3", test_valuestats3 },
+	    { "valueweightsource5", test_valueweightsource5 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
     }
     if ((properties&WRITABLE)) {
 	static const test_desc tests[] = {
-	    { "alldocspl1", test_alldocspl1 },
 	    { "alldocspl2", test_alldocspl2 },
 	    { "totaldoclen1", test_totaldoclen1 },
 	    { "exceed32bitcombineddb1", test_exceed32bitcombineddb1 },
@@ -775,30 +793,21 @@
 	    { "doclenaftercommit1", test_doclenaftercommit1 },
 	    { "valuesaftercommit1", test_valuesaftercommit1 },
 	    { "replacedoc8", test_replacedoc8 },
+	    { "replacedoc9", test_replacedoc9 },
 	    { "newfreelistblock1", test_newfreelistblock1 },
 	    { "splitpostings1", test_splitpostings1 },
 	    { "closedb7", test_closedb7 },
-	    { "metadata1", test_metadata1 },
-	    { "metadata5", test_metadata5 },
-	    { "valuerange2", test_valuerange2 },
-	    { "possubqueries1", test_possubqueries1 },
-	    { "qp_flag_wildcard1", test_qp_flag_wildcard1 },
-	    { "qp_flag_wildcard2", test_qp_flag_wildcard2 },
-	    { "qp_flag_wildcard3", test_qp_flag_wildcard3 },
-	    { "qp_flag_partial1", test_qp_flag_partial1 },
-	    { "qp_value_range3", test_qp_value_range3 },
-	    { "qp_range3", test_qp_range3 },
-	    { "qp_stopword_group1", test_qp_stopword_group1 },
+	    { "metadata6", test_metadata6 },
 	    { "modtermwdf1", test_modtermwdf1 },
 	    { "bigoaddvalue1", test_bigoaddvalue1 },
-	    { "serialise_document2", test_serialise_document2 },
 	    { "decvalwtsource1", test_decvalwtsource1 },
 	    { "decvalwtsource2", test_decvalwtsource2 },
-	    { "decvalwtsource3", test_decvalwtsource3 },
 	    { "decvalwtsource5", test_decvalwtsource5 },
 	    { "adddoc1", test_adddoc1 },
+	    { "adddoc2", test_adddoc2 },
 	    { "adddoc3", test_adddoc3 },
 	    { "adddoc4", test_adddoc4 },
+	    { "adddoc5", test_adddoc5 },
 	    { "adddoc6", test_adddoc6 },
 	    { "implicitendsession1", test_implicitendsession1 },
 	    { "databaseassign1", test_databaseassign1 },
@@ -817,9 +826,6 @@
 	    { "uniqueterm1", test_uniqueterm1 },
 	    { "allpostlist2", test_allpostlist2 },
 	    { "emptyterm2", test_emptyterm2 },
-	    { "phraseorneartoand1", test_phraseorneartoand1 },
-	    { "longpositionlist1", test_longpositionlist1 },
-	    { "consistency2", test_consistency2 },
 	    { "nomoredocids1", test_nomoredocids1 },
 	    { "termtoolong1", test_termtoolong1 },
 	    { "postlist7", test_postlist7 },
@@ -836,6 +842,13 @@
 	};
 	result = max(result, test_driver::run(tests));
     }
+    if ((properties&WRITABLE)&&!(properties&INMEMORY)&&!(properties&MULTI)) {
+	static const test_desc tests[] = {
+	    { "databasemodified1", test_databasemodified1 },
+	    { 0, 0 }
+	};
+	result = max(result, test_driver::run(tests));
+    }
     if ((properties&WRITABLE)&&!(properties&INMEMORY)&&!(properties&REMOTE)) {
 	static const test_desc tests[] = {
 	    { "replacedoc7", test_replacedoc7 },
@@ -843,24 +856,9 @@
 	};
 	result = max(result, test_driver::run(tests));
     }
-    if ((properties&WRITABLE)&&!(properties&INMEMORY)&&!(properties&REMOTE)&&!(properties&MULTI)) {
-	static const test_desc tests[] = {
-	    { "databasemodified1", test_databasemodified1 },
-	    { 0, 0 }
-	};
-	result = max(result, test_driver::run(tests));
-    }
-    if ((properties&WRITABLE)&&!(properties&MULTI)) {
-	static const test_desc tests[] = {
-	    { "adddoc2", test_adddoc2 },
-	    { "adddoc5", test_adddoc5 },
-	    { 0, 0 }
-	};
-	result = max(result, test_driver::run(tests));
-    }
     if ((properties&WRITABLE)&&!(properties&REMOTE)) {
 	static const test_desc tests[] = {
-	    { "sortfunctor2", test_sortfunctor2 },
+	    { "dbfilefd012", test_dbfilefd012 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
@@ -868,7 +866,6 @@
     if ((properties&WRITABLE)&&(properties&METADATA)) {
 	static const test_desc tests[] = {
 	    { "closedb10", test_closedb10 },
-	    { "writeread1", test_writeread1 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));
@@ -876,6 +873,7 @@
     if ((properties&WRITABLE)&&(properties&PATH)) {
 	static const test_desc tests[] = {
 	    { "retrylock1", test_retrylock1 },
+	    { "cursorbug1", test_cursorbug1 },
 	    { "closedb2", test_closedb2 },
 	    { "cursordelbug1", test_cursordelbug1 },
 	    { 0, 0 }
@@ -892,6 +890,7 @@
     if ((properties&WRITABLE)&&(properties&SYNONYMS)) {
 	static const test_desc tests[] = {
 	    { "closedb9", test_closedb9 },
+	    { "qp_scale1", test_qp_scale1 },
 	    { "synonymitor1", test_synonymitor1 },
 	    { 0, 0 }
 	};
@@ -900,7 +899,6 @@
     if ((properties&WRITABLE)&&(properties&VALUESTATS)) {
 	static const test_desc tests[] = {
 	    { "valuestats1", test_valuestats1 },
-	    { "valueweightsource5", test_valueweightsource5 },
 	    { 0, 0 }
 	};
 	result = max(result, test_driver::run(tests));

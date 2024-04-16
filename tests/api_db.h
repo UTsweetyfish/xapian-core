@@ -42,6 +42,7 @@ extern void test_sortvalue1();
 extern void test_consistency1();
 extern void test_chertdatabasenotfounderror1();
 extern void test_glassdatabasenotfounderror1();
+extern void test_databasenotfounderror2();
 extern void test_chertdatabaseopen1();
 extern void test_sortrel1();
 extern void test_netstats1();

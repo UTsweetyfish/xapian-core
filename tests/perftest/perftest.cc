@@ -193,7 +193,16 @@ get_distro()
     OSVERSIONINFO osvi;
     ZeroMemory(&osvi, sizeof(OSVERSIONINFO));
     osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+#ifdef _MSC_VER
+// GetVersionEx() is deprecated, but none of the suggested replacements seems
+// to actually provide the functionality we want here...
+# pragma warning(push)
+# pragma warning(disable:4996)
+#endif
     GetVersionEx(&osvi);
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
     distro = "Microsoft Windows v";
     distro += str(osvi.dwMajorVersion);
     distro += '.';
@@ -229,7 +238,7 @@ PerfTestLogger::open(const string & logpath)
 {
     out.open(logpath.c_str(), ios::out | ios::binary | ios::trunc);
     if (!out.is_open()) {
-	cerr << "Couldn't open output logfile '" << logpath << "'" << endl;
+	cerr << "Couldn't open output logfile '" << logpath << "'\n";
 	return false;
     }
 

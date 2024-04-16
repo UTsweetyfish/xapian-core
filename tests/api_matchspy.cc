@@ -27,8 +27,6 @@
 
 #include <xapian.h>
 
-#include <cmath>
-#include <map>
 #include <vector>
 
 #include "backendmanager.h"
@@ -137,7 +135,7 @@ make_matchspy2_db(Xapian::WritableDatabase &db, const string &)
     }
 }
 
-DEFINE_TESTCASE(matchspy2, generated)
+DEFINE_TESTCASE(matchspy2, backend)
 {
     Xapian::Database db = get_database("matchspy2", make_matchspy2_db);
 
@@ -148,7 +146,7 @@ DEFINE_TESTCASE(matchspy2, generated)
     Xapian::Enquire enq(db);
 
     enq.set_query(Xapian::Query("all"));
-    if (startswith(get_dbtype(), "multi")) {
+    if (db.size() > 1) {
 	// Without this, we short-cut on the second shard because we don't get
 	// the documents in ascending weight order.
 	enq.set_weighting_scheme(Xapian::CoordWeight());
@@ -173,7 +171,7 @@ DEFINE_TESTCASE(matchspy2, generated)
     TEST_STRINGS_EQUAL(values_to_repr(spy3), results[2]);
 }
 
-DEFINE_TESTCASE(matchspy4, generated)
+DEFINE_TESTCASE(matchspy4, backend)
 {
     XFAIL_FOR_BACKEND("multi_remote",
 		      "Matchspy counts hits on remote and locally");
@@ -196,7 +194,7 @@ DEFINE_TESTCASE(matchspy4, generated)
     Xapian::Enquire enqb(db);
 
     enqa.set_query(Xapian::Query("all"));
-    if (startswith(get_dbtype(), "multi")) {
+    if (db.size() > 1) {
 	// Without this, we short-cut on the second shard because we don't get
 	// the documents in ascending weight order.
 	enqa.set_weighting_scheme(Xapian::CoordWeight());
@@ -242,7 +240,7 @@ DEFINE_TESTCASE(matchspy4, generated)
     spies.push_back(NULL);
     spies.push_back(&spyb3);
     for (Xapian::valueno v = 0; results[v]; ++v) {
-	tout << "value " << v << endl;
+	tout << "value " << v << '\n';
 	Xapian::ValueCountMatchSpy * spy = spies[v];
 	string allvals_str("|");
 	if (spy != NULL) {
@@ -255,17 +253,17 @@ DEFINE_TESTCASE(matchspy4, generated)
 		allvals_str += str(i.get_termfreq());
 		allvals_str += '|';
 	    }
-	    tout << allvals_str << endl;
+	    tout << allvals_str << '\n';
 	    TEST_STRINGS_EQUAL(allvals_str, results[v]);
 
 	    for (size_t count = 0; count < allvals_size; ++count) {
-		tout << "count " << count << endl;
+		tout << "count " << count << '\n';
 		for (Xapian::TermIterator i = spy->top_values_begin(100),
 		     j = spy->top_values_begin(count);
 		     i != spy->top_values_end(100) &&
 		     j != spy->top_values_end(count);
 		     ++i, ++j) {
-		    tout << "j " << j << endl;
+		    tout << "j " << j << '\n';
 		    TEST_EQUAL(*i, *j);
 		    TEST_EQUAL(i.get_termfreq(), j.get_termfreq());
 		}

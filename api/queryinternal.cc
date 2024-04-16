@@ -833,13 +833,18 @@ QueryValueRange::postlist(QueryOptimiser *qopt, double factor) const
 	RETURN(new EmptyPostList);
     }
     if (end >= ub) {
-	// If begin <= lb too, then the range check isn't needed, but we do
-	// still need to consider which documents have a value set in this
-	// slot.  If this value is set for all documents, we can replace it
-	// with the MatchAll postlist, which is especially efficient if
-	// there are no gaps in the docids.
-	if (begin <= lb && db.get_value_freq(slot) == db.get_doccount()) {
-	    RETURN(db.open_post_list(string()));
+	if (begin <= lb) {
+	    // The range check isn't needed, but we do still need to consider
+	    // which documents have a value set in this slot.  If this value is
+	    // set for all documents, we can replace it with the MatchAll
+	    // postlist, which is especially efficient if there are no gaps in
+	    // the docids.
+	    if (db.get_value_freq(slot) == qopt->db_size) {
+		RETURN(db.open_post_list(string()));
+	    }
+	    // Otherwise we can at least replace the lower bound with an empty
+	    // string for a small efficiency gain.
+	    RETURN(new ValueGePostList(&db, slot, string()));
 	}
 	RETURN(new ValueGePostList(&db, slot, begin));
     }
@@ -904,7 +909,7 @@ QueryValueLE::postlist(QueryOptimiser *qopt, double factor) const
 	// set for all documents, we can replace it with the MatchAll
 	// postlist, which is especially efficient if there are no gaps in
 	// the docids.
-	if (db.get_value_freq(slot) == db.get_doccount()) {
+	if (db.get_value_freq(slot) == qopt->db_size) {
 	    RETURN(db.open_post_list(string()));
 	}
     }
@@ -968,7 +973,7 @@ QueryValueGE::postlist(QueryOptimiser *qopt, double factor) const
 	// set for all documents, we can replace it with the MatchAll
 	// postlist, which is especially efficient if there are no gaps in
 	// the docids.
-	if (db.get_value_freq(slot) == db.get_doccount()) {
+	if (db.get_value_freq(slot) == qopt->db_size) {
 	    RETURN(db.open_post_list(string()));
 	}
     }
@@ -1730,13 +1735,7 @@ QueryFilter::postlist(QueryOptimiser * qopt, double factor) const
 {
     LOGCALL(QUERY, PostingIterator::Internal *, "QueryFilter::postlist", qopt | factor);
     AndContext ctx(qopt, subqueries.size());
-    for (const auto& subq : subqueries) {
-	// MatchNothing subqueries should have been removed by done().
-	Assert(subq.internal.get());
-	subq.internal->postlist_sub_and_like(ctx, qopt, factor);
-	// Second and subsequent subqueries are unweighted.
-	factor = 0.0;
-    }
+    QueryFilter::postlist_sub_and_like(ctx, qopt, factor);
     RETURN(ctx.postlist());
 }
 
@@ -1756,7 +1755,7 @@ QueryFilter::postlist_sub_and_like(AndContext& ctx, QueryOptimiser * qopt, doubl
 void
 QueryWindowed::postlist_windowed(Query::op op, AndContext& ctx, QueryOptimiser * qopt, double factor) const
 {
-    if (!qopt->full_db_has_positions) {
+    if (!qopt->full_db_has_positions()) {
 	// No positional data anywhere, so just handle as AND.
 	QueryAndLike::postlist_sub_and_like(ctx, qopt, factor);
 	return;

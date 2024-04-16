@@ -1,0 +1,6 @@
+# Sources are under include/
+xapian-core: source-is-missing [docs/apidoc/html/*]
+# Sources are docs/*.rst
+xapian-core: source-is-missing [docs/bm25.html]
+xapian-core: source-is-missing [docs/deprecation.html]
+xapian-core: source-is-missing [docs/intro_ir.html]

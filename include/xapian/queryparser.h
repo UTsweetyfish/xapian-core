@@ -1,7 +1,7 @@
 /** @file
  * @brief parsing a user query string to build a Xapian::Query object
  */
-/* Copyright (C) 2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018 Olly Betts
+/* Copyright (C) 2005-2023 Olly Betts
  * Copyright (C) 2010 Adam Sjøgren
  *
  * This program is free software; you can redistribute it and/or
@@ -42,7 +42,11 @@ namespace Xapian {
 class Database;
 class Stem;
 
-/// Base class for stop-word decision functor.
+/** Abstract base class for stop-word decision functor.
+ *
+ *  If you just want to use an existing stopword list, see
+ *  Xapian::SimpleStopper.
+ */
 class XAPIAN_VISIBILITY_DEFAULT Stopper
     : public Xapian::Internal::opt_intrusive_base {
     /// Don't allow assignment.
@@ -69,7 +73,7 @@ class XAPIAN_VISIBILITY_DEFAULT Stopper
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated Stopper
+     *  You can transfer ownership of a dynamically allocated Stopper
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -81,7 +85,7 @@ class XAPIAN_VISIBILITY_DEFAULT Stopper
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated Stopper
+     *  You can transfer ownership of a dynamically allocated Stopper
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -102,12 +106,16 @@ class XAPIAN_VISIBILITY_DEFAULT SimpleStopper : public Stopper {
 
     /** Initialise from a pair of iterators.
      *
-     * Xapian includes stop list files for many languages. You can initialise from a file like that:
-     * @code
-     * ifstream words("stopwords/english/stop.txt");
-     * Xapian::SimplerStopper stopper(istream_iterator<string>(words), istream_iterator<string>());
-     * @endcode
+     *  Xapian includes stopword list files for many languages.  You can
+     *  initialise from a file like so:
+     *  @code
+     *  std::ifstream words("stopwords/english/stop.txt");
+     *  Xapian::SimplerStopper stopper(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());
+     *  @endcode
      *
+     *  In bindings for other languages it isn't possible to pass a C++
+     *  iterator pair, so instead this constructor is wrapped to allow
+     *  passing a filename.
      */
     template<class Iterator>
     SimpleStopper(Iterator begin, Iterator end) : stop_words(begin, end) { }
@@ -215,7 +223,7 @@ class XAPIAN_VISIBILITY_DEFAULT RangeProcessor
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated RangeProcessor
+     *  You can transfer ownership of a dynamically allocated RangeProcessor
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -227,7 +235,7 @@ class XAPIAN_VISIBILITY_DEFAULT RangeProcessor
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated RangeProcessor
+     *  You can transfer ownership of a dynamically allocated RangeProcessor
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -743,7 +751,7 @@ class XAPIAN_VISIBILITY_DEFAULT FieldProcessor
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated FieldProcessor
+     *  You can transfer ownership of a dynamically allocated FieldProcessor
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -755,7 +763,7 @@ class XAPIAN_VISIBILITY_DEFAULT FieldProcessor
 
     /** Start reference counting this object.
      *
-     *  You can hand ownership of a dynamically allocated FieldProcessor
+     *  You can transfer ownership of a dynamically allocated FieldProcessor
      *  object to Xapian by calling release() and then passing the object to a
      *  Xapian method.  Xapian will arrange to delete the object once it is no
      *  longer required.
@@ -862,20 +870,38 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
 	 */
 	FLAG_AUTO_MULTIWORD_SYNONYMS = 1024,
 
-	/** Enable generation of n-grams from CJK text.
+	/** Generate n-grams for scripts without explicit word breaks.
 	 *
-	 *  With this enabled, spans of CJK characters are split into unigrams
+	 *  Spans of characters in such scripts are split into unigrams
 	 *  and bigrams, with the unigrams carrying positional information.
-	 *  Non-CJK characters are split into words as normal.
+	 *  Text in other scripts is split into words as normal.
 	 *
-	 *  The corresponding option needs to have been used at index time.
+	 *  The TermGenerator::FLAG_NGRAMS flag needs to have been used at
+	 *  index time.
 	 *
-	 *  Flag added in Xapian 1.3.4 and 1.2.22.  This mode can be
-	 *  enabled in 1.2.8 and later by setting environment variable
-	 *  XAPIAN_CJK_NGRAM to a non-empty value (but doing so was deprecated
-	 *  in 1.4.11).
+	 *  This mode can also be enabled in 1.2.8 and later by setting
+	 *  environment variable XAPIAN_CJK_NGRAM to a non-empty value (but
+	 *  doing so was deprecated in 1.4.11).
+	 *
+	 *  In 1.4.x this feature was specific to CJK (Chinese, Japanese and
+	 *  Korean), but in 1.5.0 it's been extended to other languages.  To
+	 *  reflect this change the new and preferred name is FLAG_NGRAMS,
+	 *  which was added as an alias for forward compatibility in Xapian
+	 *  1.4.23.  Use FLAG_CJK_NGRAM instead if you aim to support Xapian
+	 *  &lt; 1.4.23.
+	 *
+	 *  @since Added in Xapian 1.4.23.
 	 */
-	FLAG_CJK_NGRAM = 2048,
+	FLAG_NGRAMS = 2048,
+
+	/** Generate n-grams for scripts without explicit word breaks.
+	 *
+	 *  Old name - use FLAG_NGRAMS instead unless you aim to support Xapian
+	 *  &lt; 1.4.23.
+	 *
+	 *  @since Added in Xapian 1.3.4 and 1.2.22.
+	 */
+	FLAG_CJK_NGRAM = FLAG_NGRAMS,
 
 	/** Accumulate unstem and stoplist results.
 	 *
@@ -891,6 +917,17 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
 	 *  @since Added in Xapian 1.4.18.
 	 */
 	FLAG_ACCUMULATE = 65536,
+
+	/** Produce a query which doesn't use positional information.
+	 *
+	 *  With this flag enabled, no positional information will be used
+	 *  and any query operations which would use it are replaced by
+	 *  the nearest equivalent which doesn't (so phrase searches, NEAR
+	 *  and ADJ will result in OP_AND).
+	 *
+	 *  @since Added in Xapian 1.4.19.
+	 */
+	FLAG_NO_POSITIONS = 0x20000,
 
 	/** The default flags.
 	 *
@@ -1244,6 +1281,11 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
      *  deprecated - use @a add_rangeprocessor() with a RangeProcessor instead.
      */
     XAPIAN_DEPRECATED(void add_valuerangeprocessor(Xapian::ValueRangeProcessor * vrproc)) {
+#ifdef __GNUC__
+// Avoid deprecation warnings if compiling without optimisation.
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 	/// Compatibility shim.
 	class ShimRangeProcessor : public RangeProcessor {
 	    Xapian::Internal::opt_intrusive_ptr<Xapian::ValueRangeProcessor> vrp;
@@ -1264,6 +1306,9 @@ class XAPIAN_VISIBILITY_DEFAULT QueryParser {
 	};
 
 	add_rangeprocessor((new ShimRangeProcessor(vrproc))->release());
+#ifdef __GNUC__
+# pragma GCC diagnostic pop
+#endif
     }
 
     /** Get the spelling-corrected query string.

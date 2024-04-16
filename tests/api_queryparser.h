@@ -51,3 +51,4 @@ extern void test_qp_default_op2();
 extern void test_qp_default_op3();
 extern void test_qp_defaultstrategysome1();
 extern void test_qp_stemsomefullpos();
+extern void test_qp_nopos();

@@ -1,20 +1,20 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.16: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.20.1: https://docutils.sourceforge.io/" />
 <title>Value Ranges</title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7952 2016-07-26 18:15:59Z milde $
+:Id: $Id: html4css1.css 8954 2022-01-20 10:10:25Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
 
-See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+See https://docutils.sourceforge.io/docs/howto/html-stylesheets.html for how to
 customize this style sheet.
 */
 
@@ -366,16 +366,16 @@ ul.auto-toc {
 <div class="contents topic" id="table-of-contents">
 <p class="topic-title">Table of contents</p>
 <ul class="simple">
-<li><a class="reference internal" href="#introduction" id="id1">Introduction</a></li>
-<li><a class="reference internal" href="#rangeprocessor" id="id2">RangeProcessor</a></li>
-<li><a class="reference internal" href="#daterangeprocessor" id="id3">DateRangeProcessor</a></li>
-<li><a class="reference internal" href="#numberrangeprocessor" id="id4">NumberRangeProcessor</a></li>
-<li><a class="reference internal" href="#custom-subclasses" id="id5">Custom subclasses</a></li>
-<li><a class="reference internal" href="#using-several-rangeprocessors" id="id6">Using Several RangeProcessors</a></li>
+<li><a class="reference internal" href="#introduction" id="toc-entry-1">Introduction</a></li>
+<li><a class="reference internal" href="#rangeprocessor" id="toc-entry-2">RangeProcessor</a></li>
+<li><a class="reference internal" href="#daterangeprocessor" id="toc-entry-3">DateRangeProcessor</a></li>
+<li><a class="reference internal" href="#numberrangeprocessor" id="toc-entry-4">NumberRangeProcessor</a></li>
+<li><a class="reference internal" href="#custom-subclasses" id="toc-entry-5">Custom subclasses</a></li>
+<li><a class="reference internal" href="#using-several-rangeprocessors" id="toc-entry-6">Using Several RangeProcessors</a></li>
 </ul>
 </div>
 <div class="section" id="introduction">
-<h1><a class="toc-backref" href="#id1">Introduction</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-1">Introduction</a></h1>
 <p>The <tt class="docutils literal"><span class="pre">Xapian::RangeProcessor</span></tt> class was introduced in Xapian 1.3.6, and
 provides a powerful and flexible way to parse range queries in the users'
 query string.  It's a replacement for the older <tt class="docutils literal"><span class="pre">Xapian::ValueRangeProcessor</span></tt>
@@ -421,7 +421,7 @@ the end, and similarly if the end is empty, that means any value greater
 than the start.  The start and end can't both be empty.</p>
 </div>
 <div class="section" id="rangeprocessor">
-<h1><a class="toc-backref" href="#id2">RangeProcessor</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-2">RangeProcessor</a></h1>
 <p>This understands any range passed which has the specified prefix or suffix.
 If no prefix or suffix is specified it will match any range (so it's not
 useful to specify further <tt class="docutils literal">RangeProcessor</tt> objects after such an object
@@ -446,7 +446,7 @@ Xapian::Query(mars:(pos=1) FILTER (VALUE_RANGE 4 asimov bradbury)
 &gt;= asimov and &lt;= bradbury (using a string comparison).</p>
 </div>
 <div class="section" id="daterangeprocessor">
-<h1><a class="toc-backref" href="#id3">DateRangeProcessor</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-3">DateRangeProcessor</a></h1>
 <p>This class allows you to implement date range searches.  As well as the value
 number to search, you can tell it whether to prefer US-style month/day/year
 or European-style day/month/year (by using the <tt class="docutils literal"><span class="pre">Xapian::RP_DATE_PREFER_MDY</span></tt>
@@ -474,7 +474,7 @@ if (strftime(buf, sizeof(buf), &quot;%Y%m%d&quot;, gmtime(&amp;doc_time))) {
 </pre>
 </div>
 <div class="section" id="numberrangeprocessor">
-<h1><a class="toc-backref" href="#id4">NumberRangeProcessor</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-4">NumberRangeProcessor</a></h1>
 <p>This class allows you to implement numeric range searches.  The numbers used
 may be any number which is representable as a double, but requires that the
 stored values which the range is being applied have been converted to strings
@@ -487,7 +487,7 @@ doc.add_value(0, Xapian::sortable_serialise(price));
 it if you want to be able to sort based on the value in numeric order, too.</p>
 </div>
 <div class="section" id="custom-subclasses">
-<h1><a class="toc-backref" href="#id5">Custom subclasses</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-5">Custom subclasses</a></h1>
 <p>You can easily create your own subclasses of <tt class="docutils literal"><span class="pre">Xapian::RangeProcessor</span></tt>.
 Your subclass needs to implement a method
 <tt class="docutils literal"><span class="pre">Xapian::Query</span> <span class="pre">operator()(const</span> <span class="pre">std::string</span> &amp;begin, const <span class="pre">std::string</span> &amp;end)</tt>
@@ -510,7 +510,7 @@ being empty suitably.  <tt class="docutils literal"><span class="pre">Xapian::Qu
 with <em>both</em> begin and end being empty.</p>
 </div>
 <div class="section" id="using-several-rangeprocessors">
-<h1><a class="toc-backref" href="#id6">Using Several RangeProcessors</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-6">Using Several RangeProcessors</a></h1>
 <p>If you want to allow the user to specify different types of ranges, you can
 specify multiple <tt class="docutils literal">RangeProcessor</tt> objects to use.  Just add them in
 the order you want them to be checked:</p>

@@ -204,26 +204,8 @@ DEFINE_TESTCASE(simplequery3, backend) {
     TEST_MSET_SIZE(mymset, 6);
 }
 
-// multidb2 no longer exists.
-
-// test that a multidb with 2 dbs query returns correct docids
-DEFINE_TESTCASE(multidb3, backend && !multi) {
-    Xapian::Database mydb2(get_database("apitest_simpledata"));
-    mydb2.add_database(get_database("apitest_simpledata2"));
-    Xapian::Enquire enquire(mydb2);
-
-    // make a query
-    Xapian::Query myquery = query(Xapian::Query::OP_OR, "inmemory", "word");
-    enquire.set_weighting_scheme(Xapian::BoolWeight());
-    enquire.set_query(myquery);
-
-    // retrieve the top ten results
-    Xapian::MSet mymset = enquire.get_mset(0, 10);
-    mset_expect_order(mymset, 2, 3, 7);
-}
-
 // test that a multidb with 3 dbs query returns correct docids
-DEFINE_TESTCASE(multidb4, backend && !multi) {
+DEFINE_TESTCASE(multidb2, backend && !multi) {
     Xapian::Database mydb2(get_database("apitest_simpledata"));
     mydb2.add_database(get_database("apitest_simpledata2"));
     mydb2.add_database(get_database("apitest_termorder"));
@@ -237,22 +219,6 @@ DEFINE_TESTCASE(multidb4, backend && !multi) {
     // retrieve the top ten results
     Xapian::MSet mymset = enquire.get_mset(0, 10);
     mset_expect_order(mymset, 2, 3, 4, 10);
-}
-
-// tests MultiPostList::skip_to().
-DEFINE_TESTCASE(multidb5, backend && !multi) {
-    Xapian::Database mydb2(get_database("apitest_simpledata"));
-    mydb2.add_database(get_database("apitest_simpledata2"));
-    Xapian::Enquire enquire(mydb2);
-
-    // make a query
-    Xapian::Query myquery = query(Xapian::Query::OP_AND, "inmemory", "word");
-    enquire.set_weighting_scheme(Xapian::BoolWeight());
-    enquire.set_query(myquery);
-
-    // retrieve the top ten results
-    Xapian::MSet mymset = enquire.get_mset(0, 10);
-    mset_expect_order(mymset, 2);
 }
 
 // tests that when specifying maxitems to get_mset, no more than
@@ -447,7 +413,7 @@ DEFINE_TESTCASE(expandmaxitems1, backend) {
     enquire.set_query(Xapian::Query("this"));
 
     Xapian::MSet mymset = enquire.get_mset(0, 10);
-    tout << "mymset.size() = " << mymset.size() << endl;
+    tout << "mymset.size() = " << mymset.size() << '\n';
     TEST(mymset.size() >= 2);
 
     Xapian::RSet myrset;
@@ -741,7 +707,6 @@ DEFINE_TESTCASE(pctcutoff1, backend) {
 // Tests the percent cutoff option combined with collapsing
 DEFINE_TESTCASE(pctcutoff2, backend) {
     Xapian::Enquire enquire(get_database("apitest_simpledata"));
-    enquire.set_query(Xapian::Query("this"));
     enquire.set_query(Xapian::Query(Xapian::Query::OP_AND_NOT, Xapian::Query("this"), Xapian::Query("banana")));
     Xapian::MSet mset = enquire.get_mset(0, 100);
 
@@ -788,7 +753,7 @@ DEFINE_TESTCASE(pctcutoff3, backend) {
 	int new_percent = mset1.convert_to_percent(i);
 	if (new_percent != percent) {
 	    tout.str(string());
-	    tout << "Testing " << percent << "% cutoff" << endl;
+	    tout << "Testing " << percent << "% cutoff\n";
 	    enquire.set_cutoff(percent);
 	    Xapian::MSet mset2 = enquire.get_mset(0, 10);
 	    TEST_EQUAL(mset2.back().get_percent(), percent);
@@ -1186,10 +1151,7 @@ DEFINE_TESTCASE(rsetmultidb3, backend && !multi) {
 }
 
 /// Simple test of the elite set operator.
-DEFINE_TESTCASE(eliteset1, backend) {
-    XFAIL_FOR_BACKEND("multi_remoteprog_glass",
-		      "Multi remote databases are currently buggy");
-
+DEFINE_TESTCASE(eliteset1, backend && !multi) {
     Xapian::Database mydb(get_database("apitest_simpledata"));
     Xapian::Enquire enquire(mydb);
 
@@ -1207,12 +1169,37 @@ DEFINE_TESTCASE(eliteset1, backend) {
     TEST_EQUAL(mymset1, mymset2);
 }
 
+/// Multi-backend variant of eliteset1.
+DEFINE_TESTCASE(elitesetmulti1, multi) {
+    Xapian::Database mydb(get_database("apitest_simpledata"));
+    Xapian::Enquire enquire(mydb);
+
+    Xapian::Query myquery2 = query(Xapian::Query::OP_ELITE_SET, 1,
+				   "simple", "word");
+
+    enquire.set_query(myquery2);
+    Xapian::MSet mymset2 = enquire.get_mset(0, 10);
+
+    // For a sharded database, the elite set is resolved per shard and can
+    // select different terms because the max term weights vary with the
+    // per-shard term statistics.  I can't see a feasible way to create
+    // an equivalent MSet to compare with so for now at least we hard-code
+    // the expected values.
+    TEST_EQUAL(mymset2.size(), 3);
+    TEST_EQUAL(mymset2.get_matches_lower_bound(), 3);
+    TEST_EQUAL(mymset2.get_matches_estimated(), 3);
+    TEST_EQUAL(mymset2.get_matches_upper_bound(), 3);
+    TEST_EQUAL_DOUBLE(mymset2.get_max_possible(), 1.1736756775723788948);
+    TEST_EQUAL_DOUBLE(mymset2.get_max_attained(), 1.0464816871772451012);
+    mset_expect_order(mymset2, 2, 4, 5);
+    TEST_EQUAL_DOUBLE(mymset2[0].get_weight(), 1.0464816871772451012);
+    TEST_EQUAL_DOUBLE(mymset2[1].get_weight(), 0.64098768659591376373);
+    TEST_EQUAL_DOUBLE(mymset2[2].get_weight(), 0.46338869498075929698);
+}
+
 /// Test that the elite set operator works if the set contains
 /// sub-expressions (regression test)
-DEFINE_TESTCASE(eliteset2, backend) {
-    XFAIL_FOR_BACKEND("multi_remoteprog_glass",
-		      "Multi remote databases are currently buggy");
-
+DEFINE_TESTCASE(eliteset2, backend && !multi) {
     Xapian::Database mydb(get_database("apitest_simpledata"));
     Xapian::Enquire enquire(mydb);
 
@@ -1231,10 +1218,42 @@ DEFINE_TESTCASE(eliteset2, backend) {
     Xapian::MSet mymset2 = enquire.get_mset(0, 10);
 
     TEST_EQUAL(mymset1, mymset2);
-    // query lengths differ so mset weights not the same (with some weighting
-    // parameters)
-    // test_mset_order_equal(mymset1, mymset2);
 }
+
+/// Multi-backend variant of eliteset2.
+DEFINE_TESTCASE(elitesetmulti2, multi) {
+    Xapian::Database mydb(get_database("apitest_simpledata"));
+    Xapian::Enquire enquire(mydb);
+
+    Xapian::Query myquery1 = query(Xapian::Query::OP_AND, "word", "search");
+
+    vector<Xapian::Query> qs;
+    qs.push_back(query("this"));
+    qs.push_back(query(Xapian::Query::OP_AND, "word", "search"));
+    Xapian::Query myquery2(Xapian::Query::OP_ELITE_SET,
+			   qs.begin(), qs.end(), 1);
+
+    enquire.set_query(myquery2);
+    Xapian::MSet mymset2 = enquire.get_mset(0, 10);
+
+    // For a sharded database, the elite set is resolved per shard and can
+    // select different terms because the max term weights vary with the
+    // per-shard term statistics.  I can't see a feasible way to create
+    // an equivalent MSet to compare with so for now at least we hard-code
+    // the expected values.
+    TEST_EQUAL(mymset2.size(), 4);
+    TEST_EQUAL(mymset2.get_matches_lower_bound(), 4);
+    TEST_EQUAL(mymset2.get_matches_estimated(), 4);
+    TEST_EQUAL(mymset2.get_matches_upper_bound(), 4);
+    TEST_EQUAL_DOUBLE(mymset2.get_max_possible(), 2.6585705165783908299);
+    TEST_EQUAL_DOUBLE(mymset2.get_max_attained(), 1.9700834242150864206);
+    mset_expect_order(mymset2, 2, 1, 3, 5);
+    TEST_EQUAL_DOUBLE(mymset2[0].get_weight(), 1.9700834242150864206);
+    TEST_EQUAL_DOUBLE(mymset2[1].get_weight(), 0.051103097360122341775);
+    TEST_EQUAL_DOUBLE(mymset2[2].get_weight(), 0.043131803408968119595);
+    TEST_EQUAL_DOUBLE(mymset2[3].get_weight(), 0.043131803408968119595);
+}
+
 
 /// Test that elite set doesn't affect query results if we have fewer
 /// terms than the threshold
@@ -1267,6 +1286,8 @@ DEFINE_TESTCASE(eliteset3, backend) {
     Xapian::MSet mymset1 = enquire1.get_mset(0, 10);
     Xapian::MSet mymset2 = enquire2.get_mset(0, 10);
 
+    TEST_EQUAL(mymset1, mymset2);
+
     TEST_EQUAL(mymset1.get_termfreq(term1),
 	       mymset2.get_termfreq(term1));
     TEST_EQUAL(mymset1.get_termweight(term1),
@@ -1279,17 +1300,10 @@ DEFINE_TESTCASE(eliteset3, backend) {
 	       mymset2.get_termfreq(term3));
     TEST_EQUAL(mymset1.get_termweight(term3),
 	       mymset2.get_termweight(term3));
-//    TEST_EQUAL(mymset1, mymset2);
 }
 
 /// Test that elite set doesn't pick terms with 0 frequency
-DEFINE_TESTCASE(eliteset4, backend) {
-    XFAIL_FOR_BACKEND("multi_glass_remoteprog_glass",
-		      "Multi remote databases are currently buggy");
-
-    XFAIL_FOR_BACKEND("multi_remoteprog_glass",
-		      "Multi remote databases are currently buggy");
-
+DEFINE_TESTCASE(eliteset4, backend && !multi) {
     Xapian::Database mydb1(get_database("apitest_simpledata"));
     Xapian::Enquire enquire1(mydb1);
 
@@ -1308,6 +1322,35 @@ DEFINE_TESTCASE(eliteset4, backend) {
 
     TEST_NOT_EQUAL(mymset2.size(), 0);
     TEST_EQUAL(mymset1, mymset2);
+}
+
+/// Multi-backend variant of eliteset4.
+DEFINE_TESTCASE(elitesetmulti4, multi) {
+    Xapian::Database mydb2(get_database("apitest_simpledata"));
+    Xapian::Enquire enquire2(mydb2);
+
+    Xapian::Query myquery2 = query(Xapian::Query::OP_ELITE_SET, 1,
+				   "word", "rubbish", "fibble");
+    enquire2.set_query(myquery2);
+
+    // retrieve the results
+    Xapian::MSet mymset2 = enquire2.get_mset(0, 10);
+
+    // For a sharded database, the elite set is resolved per shard and can
+    // select different terms because the max term weights vary with the
+    // per-shard term statistics.  I can't see a feasible way to create
+    // an equivalent MSet to compare with so for now at least we hard-code
+    // the expected values.
+    TEST_EQUAL(mymset2.size(), 3);
+    TEST_EQUAL(mymset2.get_matches_lower_bound(), 3);
+    TEST_EQUAL(mymset2.get_matches_estimated(), 3);
+    TEST_EQUAL(mymset2.get_matches_upper_bound(), 3);
+    TEST_EQUAL_DOUBLE(mymset2.get_max_possible(), 1.4848948390060121572);
+    TEST_EQUAL_DOUBLE(mymset2.get_max_attained(), 1.4848948390060121572);
+    mset_expect_order(mymset2, 3, 2, 4);
+    TEST_EQUAL_DOUBLE(mymset2[0].get_weight(), 1.4848948390060121572);
+    TEST_EQUAL_DOUBLE(mymset2[1].get_weight(), 1.0464816871772451012);
+    TEST_EQUAL_DOUBLE(mymset2[2].get_weight(), 0.64098768659591376373);
 }
 
 /// Regression test for problem with excess precision.
@@ -1478,10 +1521,10 @@ DEFINE_TESTCASE(msetzeroitems1, backend) {
 
 // test that the matches_* of a simple query are as expected
 DEFINE_TESTCASE(matches1, backend) {
-    bool multi = startswith(get_dbtype(), "multi");
     bool remote = get_dbtype().find("remote") != string::npos;
 
-    Xapian::Enquire enquire(get_database("apitest_simpledata"));
+    Xapian::Database db = get_database("apitest_simpledata");
+    Xapian::Enquire enquire(db);
     Xapian::Query myquery;
     Xapian::MSet mymset;
 
@@ -1528,7 +1571,7 @@ DEFINE_TESTCASE(matches1, backend) {
     myquery = query(Xapian::Query::OP_AND, "simple", "word");
     enquire.set_query(myquery);
     mymset = enquire.get_mset(0, 0);
-    if (!multi) {
+    if (db.size() == 1) {
 	// This isn't true for sharded DBs since there one sub-database has 3
 	// documents and simple and word both have termfreq of 2, so the
 	// matcher can tell at least one document must match!)
@@ -1570,7 +1613,7 @@ DEFINE_TESTCASE(matches1, backend) {
     mymset = enquire.get_mset(0, 1);
     TEST_EQUAL(mymset.get_matches_lower_bound(), 1);
     TEST_EQUAL(mymset.get_uncollapsed_matches_lower_bound(), 1);
-    if (multi && remote) {
+    if (db.size() > 1 && remote) {
 	// The matcher can tell there's only one match in this case.
 	TEST_EQUAL(mymset.get_matches_estimated(), 1);
 	TEST_EQUAL(mymset.get_uncollapsed_matches_estimated(), 1);
@@ -1982,13 +2025,15 @@ DEFINE_TESTCASE(emptyterm1, backend) {
 }
 
 // Test for alldocs postlist with a sparse database.
-DEFINE_TESTCASE(alldocspl1, writable) {
-    Xapian::WritableDatabase db = get_writable_database();
-    Xapian::Document doc;
-    doc.set_data("5");
-    doc.add_value(0, "5");
-    db.replace_document(5, doc);
-
+DEFINE_TESTCASE(alldocspl1, backend) {
+    Xapian::Database db = get_database("alldocspl1",
+				       [](Xapian::WritableDatabase& wdb,
+					  const string&) {
+					   Xapian::Document doc;
+					   doc.set_data("5");
+					   doc.add_value(0, "5");
+					   wdb.replace_document(5, doc);
+				       });
     Xapian::PostingIterator i = db.postlist_begin("");
     TEST(i != db.postlist_end(""));
     TEST_EQUAL(*i, 5);
@@ -2110,7 +2155,7 @@ DEFINE_TESTCASE(scaleweight1, backend) {
     for (auto qstr : queries) {
 	tout.str(string());
 	Xapian::Query query1 = qp.parse_query(qstr);
-	tout << "query1: " << query1.get_description() << endl;
+	tout << "query1: " << query1.get_description() << '\n';
 	for (const double *multp = multipliers; multp[0] != multp[1]; ++multp) {
 	    double mult = *multp;
 	    if (mult < 0) {
@@ -2120,7 +2165,7 @@ DEFINE_TESTCASE(scaleweight1, backend) {
 		continue;
 	    }
 	    Xapian::Query query2(Xapian::Query::OP_SCALE_WEIGHT, query1, mult);
-	    tout << "query2: " << query2.get_description() << endl;
+	    tout << "query2: " << query2.get_description() << '\n';
 
 	    enq.set_query(query1);
 	    Xapian::MSet mset1 = enq.get_mset(0, 20);

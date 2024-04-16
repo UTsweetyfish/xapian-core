@@ -29,6 +29,7 @@
 
 #include "safefcntl.h"
 #include "safenetdb.h"
+#include "safesysexits.h"
 #include "safesyssocket.h"
 
 #include "noreturn.h"
@@ -150,23 +151,6 @@ TcpServer::get_listening_socket(const std::string & host, int port,
 				sizeof(optval));
 	}
 
-#if defined SO_EXCLUSIVEADDRUSE
-	// NT4 sp4 and later offer SO_EXCLUSIVEADDRUSE which nullifies the
-	// security issues from SO_REUSEADDR (which affect *any* listening
-	// process, even if doesn't use SO_REUSEADDR itself).  There's still no
-	// way of addressing the issue of not being able to listen on a port
-	// which has closed connections in TIME_WAIT state though.
-	//
-	// Note: SO_EXCLUSIVEADDRUSE requires admin privileges prior to XP SP2.
-	// Because of this and the lack support on older versions, we don't
-	// currently check the return value.
-	if (retval >= 0) {
-	    (void)setsockopt(fd, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
-			     reinterpret_cast<char *>(&optval),
-			     sizeof(optval));
-	}
-#endif
-
 	if (retval < 0) {
 	    int saved_errno = socket_errno(); // note down in case close hits an error
 	    CLOSESOCKET(fd);
@@ -190,15 +174,15 @@ TcpServer::get_listening_socket(const std::string & host, int port,
     if (socketfd == -1) {
 	if (bind_errno == EADDRINUSE) {
 	    cerr << host << ':' << port << " already in use" << endl;
-	    // 69 is EX_UNAVAILABLE.  Scripts can use this to detect if the
-	    // server failed to bind to the requested port.
-	    exit(69); // FIXME: calling exit() here isn't ideal...
+	    // EX_UNAVAILABLE is 69.  Scripts can use this to detect that the
+	    // requested port was already in use.
+	    exit(EX_UNAVAILABLE);
 	}
 	if (bind_errno == EACCES) {
 	    cerr << "Can't bind to privileged port " << port << endl;
-	    // 77 is EX_NOPERM.  Scripts can use this to detect if
+	    // EX_NOPERM is 77.  Scripts can use this to detect if
 	    // xapian-tcpsrv failed to bind to the requested port.
-	    exit(77); // FIXME: calling exit() here isn't ideal...
+	    exit(EX_NOPERM);
 	}
 	throw Xapian::NetworkError("bind failed", bind_errno);
     }

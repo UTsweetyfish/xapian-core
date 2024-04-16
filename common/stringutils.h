@@ -1,7 +1,7 @@
 /** @file
  * @brief Various handy helpers which std::string really should provide.
  */
-/* Copyright (C) 2004,2005,2006,2007,2008,2009,2010,2015 Olly Betts
+/* Copyright (C) 2004-2022 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,6 +41,11 @@
  *  macro is applied to something other than a string literal.
  */
 #define CONST_STRLEN(S) (sizeof(S"") - 1)
+
+/* C++20 added starts_with(), ends_with() and contains() methods to std::string
+ * and std::string_view which provide this functionality, but we don't yet
+ * require C++20.
+ */
 
 inline bool
 startswith(const std::string & s, char pfx)
@@ -90,10 +95,48 @@ endswith(const std::string & s, const std::string & sfx)
     return endswith(s, sfx.data(), sfx.size());
 }
 
+inline bool
+contains(const std::string& s, char substring)
+{
+    return s.find(substring) != s.npos;
+}
+
+inline bool
+contains(const std::string& s, const char* substring, size_t len)
+{
+    return s.find(substring, 0, len) != s.npos;
+}
+
+inline bool
+contains(const std::string& s, const char* substring)
+{
+    return s.find(substring) != s.npos;
+}
+
+inline bool
+contains(const std::string& s, const std::string& substring)
+{
+    return s.find(substring) != s.npos;
+}
+
 inline std::string::size_type
 common_prefix_length(const std::string &a, const std::string &b)
 {
     std::string::size_type minlen = std::min(a.size(), b.size());
+    std::string::size_type common;
+    for (common = 0; common < minlen; ++common) {
+	if (a[common] != b[common]) break;
+    }
+    return common;
+}
+
+inline std::string::size_type
+common_prefix_length(const std::string& a, const std::string& b,
+		     std::string::size_type max_prefix_len)
+{
+    std::string::size_type minlen = std::min({a.size(),
+					      b.size(),
+					      max_prefix_len});
     std::string::size_type common;
     for (common = 0; common < minlen; ++common) {
 	if (a[common] != b[common]) break;
@@ -188,6 +231,17 @@ inline char C_toupper(char ch) {
 inline int hex_digit(char ch) {
     using namespace Xapian::Internal;
     return C_tab_(ch) & HEX_MASK;
+}
+
+/** Decode a pair of ASCII hex digits.
+ *
+ *  E.g. hex_decode('4', 'A') gives 'J'.
+ *
+ *  If C_isxdigit(ch1) isn't true then ch1 is treated as '0', and similarly for
+ *  ch2.
+ */
+inline char hex_decode(char ch1, char ch2) {
+    return char(hex_digit(ch1) << 4 | hex_digit(ch2));
 }
 
 #endif // XAPIAN_INCLUDED_STRINGUTILS_H

@@ -8,6 +8,6 @@ extern void test_snippet_termcover2();
 extern void test_snippet_empty();
 extern void test_snippet_start_nonspace();
 extern void test_snippet_small_zerolength();
-extern void test_snippet_cjkngrams();
+extern void test_snippet_ngrams();
 extern void test_snippet_empty_mset();
 extern void test_snippet_empty_mset2();

@@ -9,6 +9,8 @@ if MAINTAINER_MODE
 export ACLOCAL AUTOCONF AUTOHEADER AUTOM4TE AUTOMAKE
 endif
 
+AM_CXXFLAGS += $(WERROR)
+
 AM_CPPFLAGS = -I$(top_srcdir)/common -I$(top_srcdir)/include
 if VPATH_BUILD
 # Needed for the generated files include/xapian/version.h
@@ -65,7 +67,7 @@ coverage-check:
 	rm -f xapian-core.lcov
 	lcov --capture -d . --quiet --rc 'lcov_branch_coverage=1' --no-external -o xapian-core.lcov
 	rm -rf lcov
-	genhtml --demangle-cpp --branch-coverage $(GENHTML_ARGS) -q -p "`pwd`" -t "Test Coverage for xapian-core `git log -n1 --abbrev-commit --format=%h`" -o lcov xapian-core.lcov
+	genhtml --demangle-cpp --branch-coverage $(GENHTML_ARGS) -q -p '$(abs_builddir)' -t "Test Coverage for xapian-core `git log -n1 --abbrev-commit --format=%h`" -o lcov xapian-core.lcov
 
 # We want to clean out build tree paths from the copy of xapian-config we
 # install, mostly in the interests of facilitating reproducible builds.

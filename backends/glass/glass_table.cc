@@ -292,7 +292,7 @@ GlassTable::set_overwritten() const
     // If we're writable, there shouldn't be another writer who could cause
     // overwritten to be flagged, so that's a DatabaseCorruptError.
     if (writable)
-	throw Xapian::DatabaseCorruptError("Db block overwritten - are there multiple writers?");
+	throw Xapian::DatabaseCorruptError("Block overwritten - run xapian-check on this database");
     throw Xapian::DatabaseModifiedError("The revision being read has been discarded - you should call Xapian::Database::reopen() and retry the operation");
 }
 
@@ -605,8 +605,10 @@ GlassTable::split_root(uint4 split_n)
 
     /* check level overflow - this isn't something that should ever happen
      * but deserves more than an Assert()... */
-    if (level == BTREE_CURSOR_LEVELS) {
-	throw Xapian::DatabaseCorruptError("Btree has grown impossibly large (" STRINGIZE(BTREE_CURSOR_LEVELS) " levels)");
+    if (level == GLASS_BTREE_CURSOR_LEVELS) {
+	throw Xapian::DatabaseCorruptError("Btree has grown impossibly large ("
+					   STRINGIZE(GLASS_BTREE_CURSOR_LEVELS)
+					   " levels)");
     }
 
     uint8_t * q = C[level].init(block_size);
@@ -1274,7 +1276,7 @@ void GlassTable::form_key(const string & key) const
 */
 
 void
-GlassTable::add(const string &key, string tag, bool already_compressed)
+GlassTable::add(const string& key, const string& tag, bool already_compressed)
 {
     LOGCALL_VOID(DB, "GlassTable::add", key | tag | already_compressed);
     Assert(writable);
@@ -1445,6 +1447,10 @@ GlassTable::readahead_key(const string &key) const
     // If the table only has one level, there are no branch blocks to preread.
     if (level == 0)
 	RETURN(false);
+
+    // An overlong key cannot be found.
+    if (key.size() > GLASS_BTREE_MAX_KEY_LEN)
+	RETURN(true);
 
     form_key(key);
 
@@ -1892,7 +1898,7 @@ GlassTable::commit(glass_revision_number_t revision, RootInfo * root_info)
 
 	Btree_modified = false;
 
-	for (int i = 0; i < BTREE_CURSOR_LEVELS; ++i) {
+	for (int i = 0; i <= level; ++i) {
 	    C[i].init(block_size);
 	}
 

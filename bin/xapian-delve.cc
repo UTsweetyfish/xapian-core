@@ -3,7 +3,7 @@
  */
 /* Copyright 1999,2000,2001 BrightStation PLC
  * Copyright 2002 Ananova Ltd
- * Copyright 2002,2003,2004,2006,2007,2008,2009,2010,2011,2012,2013,2014,2016,2017,2018 Olly Betts
+ * Copyright 2002-2022 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -84,44 +84,45 @@ static void show_usage() {
 "  -z                    for db, count documents with length 0\n"
 "  -v                    extra info (wdf and len for postlist;\n"
 "                        wdf and termfreq for termlist; number of terms for db;\n"
-"                        termfreq when showing all terms)\n"
+"                        termfreq when showing all terms; value bounds and freq\n"
+"                        when showing all values in a slot)\n"
 "  -vv                   even more info (also show collection freq and wdf\n"
 "                        upper bound for terms)\n"
 "      --help            display this help and exit\n"
-"      --version         output version information and exit" << endl;
+"      --version         output version information and exit\n";
 }
 
 static void
 show_db_stats(Database &db)
 {
     // Display a few database stats.
-    cout << "UUID = " << db.get_uuid() << endl;
-    cout << "number of documents = " << db.get_doccount() << endl;
-    cout << "average document length = " << db.get_avlength() << endl;
+    cout << "UUID = " << db.get_uuid() << '\n';
+    cout << "number of documents = " << db.get_doccount() << '\n';
+    cout << "average document length = " << db.get_avlength() << '\n';
     cout << "document length lower bound = " << db.get_doclength_lower_bound()
-	 << endl;
+	 << '\n';
     cout << "document length upper bound = " << db.get_doclength_upper_bound()
-	 << endl;
-    cout << "highest document id ever used = " << db.get_lastdocid() << endl;
+	 << '\n';
+    cout << "highest document id ever used = " << db.get_lastdocid() << '\n';
     cout << boolalpha;
-    cout << "has positional information = " << db.has_positions() << endl;
+    cout << "has positional information = " << db.has_positions() << '\n';
     cout << "revision = ";
     if (db.size() > 1) {
 	cout << "N/A (sharded DB)\n";
     } else {
 	try {
-	    cout << db.get_revision() << endl;
+	    cout << db.get_revision() << '\n';
 	} catch (const Xapian::InvalidOperationError& e) {
-	    cout << e.get_description() << endl;
+	    cout << e.get_description() << '\n';
 	} catch (const Xapian::UnimplementedError& e) {
 	    cout << "N/A (" << e.get_msg() << ")\n";
 	}
     }
     cout << "currently open for writing = ";
     try {
-	cout << db.locked() << endl;
+	cout << db.locked() << '\n';
     } catch (const Xapian::Error& e) {
-	cout << e.get_description() << endl;
+	cout << e.get_description() << '\n';
     }
 
     if (count_zero_length_docs) {
@@ -137,7 +138,7 @@ show_db_stats(Database &db)
 		++d;
 	    }
 	}
-	cout << "number of zero-length documents = " << empty_docs << endl;
+	cout << "number of zero-length documents = " << empty_docs << '\n';
     }
 
     if (verbose) {
@@ -150,7 +151,7 @@ show_db_stats(Database &db)
 	    ++terms;
 	    ++t;
 	}
-	cout << "number of distinct terms = " << terms << endl;
+	cout << "number of distinct terms = " << terms << '\n';
     }
 }
 
@@ -201,7 +202,7 @@ show_values(Database &db,
     while (i != end) {
 	cout << "Values for record #" << *i << ':';
 	show_values(db, *i, separator);
-	cout << endl;
+	cout << '\n';
 	++i;
     }
 }
@@ -216,7 +217,7 @@ show_value(Database &db,
 	Xapian::docid did = *i;
 	cout << "Value " << slot << " for record #" << did << ": ";
 	decode_and_show_value(db.get_document(did).get_value(slot));
-	cout << endl;
+	cout << '\n';
 	++i;
     }
 }
@@ -233,8 +234,8 @@ show_docdata(Database &db,
 	     vector<docid>::const_iterator end)
 {
     while (i != end) {
-	cout << "Data for record #" << *i << ':' << endl;
-	cout << db.get_document(*i).get_data() << endl;
+	cout << "Data for record #" << *i << ":\n";
+	cout << db.get_document(*i).get_data() << '\n';
 	++i;
     }
 }
@@ -280,7 +281,7 @@ show_termlist(const Database &db, Xapian::docid did,
 	}
 	++t;
     }
-    cout << endl;
+    cout << '\n';
 }
 
 static void
@@ -304,7 +305,7 @@ main(int argc, char **argv) try {
 	    exit(0);
 	}
 	if (strcmp(argv[1], "--version") == 0) {
-	    cout << PROG_NAME " - " PACKAGE_STRING << endl;
+	    cout << PROG_NAME " - " PACKAGE_STRING "\n";
 	    exit(0);
 	}
     }
@@ -332,12 +333,12 @@ main(int argc, char **argv) try {
 		errno = 0;
 		unsigned long n = strtoul(optarg, &end, 10);
 		if (optarg == end || *end) {
-		    cout << "Non-numeric document id: " << optarg << endl;
+		    cout << "Non-numeric document id: " << optarg << '\n';
 		    exit(1);
 		}
 		Xapian::docid did(n);
 		if (errno == ERANGE || n == 0 || did != n) {
-		    cout << "Document id out of range: " << optarg << endl;
+		    cout << "Document id out of range: " << optarg << '\n';
 		    exit(1);
 		}
 		recnos.push_back(did);
@@ -376,12 +377,12 @@ main(int argc, char **argv) try {
 		    errno = 0;
 		    unsigned long n = strtoul(optarg, &end, 10);
 		    if (optarg == end || *end) {
-			cout << "Non-numeric value slot: " << optarg << endl;
+			cout << "Non-numeric value slot: " << optarg << '\n';
 			exit(1);
 		    }
 		    slot = Xapian::valueno(n);
 		    if (errno == ERANGE || slot != n) {
-			cout << "Value slot out of range: " << optarg << endl;
+			cout << "Value slot out of range: " << optarg << '\n';
 			exit(1);
 		    }
 		    slot_set = true;
@@ -421,7 +422,7 @@ main(int argc, char **argv) try {
 		db.add_database(Database(*i));
 	    } catch (const Error &e) {
 		cerr << "Error opening database '" << *i << "': ";
-		cerr << e.get_description() << endl;
+		cerr << e.get_description() << '\n';
 		return 1;
 	    }
 	}
@@ -449,14 +450,22 @@ main(int argc, char **argv) try {
 	}
     } else {
 	if (slot_set) {
-	    cout << "Value " << slot << " for each document:";
+	    cout << "Value " << slot;
+	    if (verbose) {
+		cout << " (lower bound=";
+		decode_and_show_value(db.get_value_lower_bound(slot));
+		cout << " upper bound=";
+		decode_and_show_value(db.get_value_upper_bound(slot));
+		cout << " freq=" << db.get_value_freq(slot) << ")";
+	    }
+	    cout << " for each document:";
 	    ValueIterator it = db.valuestream_begin(slot);
 	    while (it != db.valuestream_end(slot)) {
 		cout << separator << it.get_docid() << ':';
 		decode_and_show_value(*it);
 		++it;
 	    }
-	    cout << endl;
+	    cout << '\n';
 	}
     }
 
@@ -489,7 +498,7 @@ main(int argc, char **argv) try {
 		if (showdocdata) show_docdata(db, *p, ' ');
 		++p;
 	    }
-	    cout << endl;
+	    cout << '\n';
 	} else {
 	    // Display position lists
 	    vector<docid>::const_iterator j;
@@ -497,7 +506,7 @@ main(int argc, char **argv) try {
 		p.skip_to(*j);
 		if (p == pend || *p != *j) {
 		    cout << "term '" << term <<
-			"' doesn't index document #" << *j << endl;
+			"' doesn't index document #" << *j << '\n';
 		} else {
 		    cout << "Position List for term '" << term
 			<< "', record #" << *j << ':';
@@ -507,15 +516,15 @@ main(int argc, char **argv) try {
 			    cout << separator << *pos;
 			    ++pos;
 			}
-			cout << endl;
+			cout << '\n';
 		    } catch (const Error &e) {
-			cerr << "Error: " << e.get_description() << endl;
+			cerr << "Error: " << e.get_description() << '\n';
 		    }
 		}
 	    }
 	}
     }
 } catch (const Error &e) {
-    cerr << "\nError: " << e.get_description() << endl;
+    cerr << "\nError: " << e.get_description() << '\n';
     return 1;
 }

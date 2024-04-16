@@ -4,7 +4,7 @@
 /* Copyright 1999,2000,2001 BrightStation PLC
  * Copyright 2001 Hein Ragas
  * Copyright 2002 Ananova Ltd
- * Copyright 2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2014,2015,2018 Olly Betts
+ * Copyright 2002-2023 Olly Betts
  * Copyright 2006 Richard Boulton
  * Copyright 2007 Lemur Consulting Ltd
  *
@@ -43,6 +43,7 @@
 #include "safeunistd.h"
 #include <cmath>
 #include <cstdlib>
+#include <limits>
 #include <map>
 #include <string>
 
@@ -96,10 +97,11 @@ DEFINE_TESTCASE(adddoc1, writable) {
 }
 
 // test that removing a posting and removing a term works
-DEFINE_TESTCASE(adddoc2, writable && !multi) {
-    // FIXME: With multi, get_termfreq() on a TermIterator from a Document
-    // currently returns the termfreq for just the shard the doc is in.
+DEFINE_TESTCASE(adddoc2, writable) {
     Xapian::WritableDatabase db = get_writable_database();
+    // get_termfreq() on a TermIterator from a Document returns the termfreq
+    // for just the shard the doc is in.
+    bool sharded = (db.size() > 1);
 
     Xapian::Document doc1;
 
@@ -125,8 +127,10 @@ DEFINE_TESTCASE(adddoc2, writable && !multi) {
     TEST_EQUAL(*iter2, *iter1);
     TEST_EQUAL(iter1.get_wdf(), 1);
     TEST_EQUAL(iter2.get_wdf(), 1);
-    // TEST_EQUAL(iter1.get_termfreq(), 0);
-    TEST_EQUAL(iter2.get_termfreq(), 1);
+    if (!sharded) {
+	// TEST_EQUAL(iter1.get_termfreq(), 0);
+	TEST_EQUAL(iter2.get_termfreq(), 1);
+    }
 
     iter1++;
     iter2++;
@@ -136,8 +140,10 @@ DEFINE_TESTCASE(adddoc2, writable && !multi) {
     TEST_EQUAL(*iter2, *iter1);
     TEST_EQUAL(iter1.get_wdf(), 4);
     TEST_EQUAL(iter2.get_wdf(), 4);
-    // TEST_EQUAL(iter1.get_termfreq(), 0);
-    TEST_EQUAL(iter2.get_termfreq(), 1);
+    if (!sharded) {
+	// TEST_EQUAL(iter1.get_termfreq(), 0);
+	TEST_EQUAL(iter2.get_termfreq(), 1);
+    }
 
     iter1++;
     iter2++;
@@ -147,8 +153,10 @@ DEFINE_TESTCASE(adddoc2, writable && !multi) {
     TEST_EQUAL(*iter2, *iter1);
     TEST_EQUAL(iter1.get_wdf(), 1);
     TEST_EQUAL(iter2.get_wdf(), 1);
-    // assertion fails in debug build! TEST_EQUAL(iter1.get_termfreq(), 0);
-    TEST_EQUAL(iter2.get_termfreq(), 1);
+    if (!sharded) {
+	// assertion fails in debug build! TEST_EQUAL(iter1.get_termfreq(), 0);
+	TEST_EQUAL(iter2.get_termfreq(), 1);
+    }
 
     iter1++;
     iter2++;
@@ -158,8 +166,10 @@ DEFINE_TESTCASE(adddoc2, writable && !multi) {
     TEST_EQUAL(*iter2, *iter1);
     TEST_EQUAL(iter1.get_wdf(), 1);
     TEST_EQUAL(iter2.get_wdf(), 1);
-    // assertion fails in debug build! TEST_EQUAL(iter1.get_termfreq(), 0);
-    TEST_EQUAL(iter2.get_termfreq(), 1);
+    if (!sharded) {
+	// assertion fails in debug build! TEST_EQUAL(iter1.get_termfreq(), 0);
+	TEST_EQUAL(iter2.get_termfreq(), 1);
+    }
 
     iter1++;
     iter2++;
@@ -206,8 +216,10 @@ DEFINE_TESTCASE(adddoc2, writable && !multi) {
     TEST_EQUAL(*iter2, *iter1);
     TEST_EQUAL(iter1.get_wdf(), 0);
     TEST_EQUAL(iter2.get_wdf(), 0);
-    TEST_EQUAL(iter1.get_termfreq(), 1);
-    // TEST_EQUAL(iter2.get_termfreq(), 0);
+    if (!sharded) {
+	TEST_EQUAL(iter1.get_termfreq(), 1);
+	// TEST_EQUAL(iter2.get_termfreq(), 0);
+    }
     TEST(iter1.positionlist_begin() == iter1.positionlist_end());
     TEST(iter2.positionlist_begin() == iter2.positionlist_end());
 
@@ -219,8 +231,10 @@ DEFINE_TESTCASE(adddoc2, writable && !multi) {
     TEST_EQUAL(*iter2, *iter1);
     TEST_EQUAL(iter1.get_wdf(), 9);
     TEST_EQUAL(iter2.get_wdf(), 9);
-    TEST_EQUAL(iter1.get_termfreq(), 2);
-    // TEST_EQUAL(iter2.get_termfreq(), 0);
+    if (!sharded) {
+	TEST_EQUAL(iter1.get_termfreq(), 2);
+	// TEST_EQUAL(iter2.get_termfreq(), 0);
+    }
 
     Xapian::PositionIterator pi1;
     pi1 = iter1.positionlist_begin();
@@ -238,8 +252,10 @@ DEFINE_TESTCASE(adddoc2, writable && !multi) {
     TEST_EQUAL(*iter2, *iter1);
     TEST_EQUAL(iter1.get_wdf(), 0);
     TEST_EQUAL(iter2.get_wdf(), 0);
-    TEST_EQUAL(iter1.get_termfreq(), 1);
-    // TEST_EQUAL(iter2.get_termfreq(), 0);
+    if (!sharded) {
+	TEST_EQUAL(iter1.get_termfreq(), 1);
+	// TEST_EQUAL(iter2.get_termfreq(), 0);
+    }
     TEST(iter1.positionlist_begin() == iter1.positionlist_end());
     TEST(iter2.positionlist_begin() == iter2.positionlist_end());
 
@@ -251,8 +267,10 @@ DEFINE_TESTCASE(adddoc2, writable && !multi) {
     TEST_EQUAL(*iter2, *iter1);
     TEST_EQUAL(iter1.get_wdf(), 0);
     TEST_EQUAL(iter2.get_wdf(), 0);
-    TEST_EQUAL(iter1.get_termfreq(), 2);
-    // TEST_EQUAL(iter2.get_termfreq(), 0);
+    if (!sharded) {
+	TEST_EQUAL(iter1.get_termfreq(), 2);
+	// TEST_EQUAL(iter2.get_termfreq(), 0);
+    }
 
     Xapian::PositionIterator temp1 = iter1.positionlist_begin();
     pi1 = temp1;
@@ -317,7 +335,7 @@ DEFINE_TESTCASE(adddoc4, writable) {
 
 // Test adding a document, and checking that it got added correctly.
 // This testcase used to be adddoc2 in quartztest.
-DEFINE_TESTCASE(adddoc5, writable && !multi) {
+DEFINE_TESTCASE(adddoc5, writable) {
     // FIXME: With multi, get_termfreq() on a TermIterator from a Document
     // currently returns the termfreq for just the shard the doc is in.
 
@@ -393,6 +411,10 @@ DEFINE_TESTCASE(adddoc5, writable && !multi) {
 	Xapian::Database database(get_writable_database_as_database());
 	Xapian::Document document_out = database.get_document(did);
 
+	// get_termfreq() on a TermIterator from a Document returns the
+	// termfreq for just the shard the doc is in.
+	bool sharded = (database.size() > 1);
+
 	TEST_EQUAL(document_in.get_data(), document_out.get_data());
 
 	{
@@ -424,18 +446,20 @@ DEFINE_TESTCASE(adddoc5, writable && !multi) {
 		TEST_NOT_EQUAL(j, document_out.termlist_end());
 		TEST_EQUAL(*i, *j);
 		TEST_EQUAL(i.get_wdf(), j.get_wdf());
-		// Actually use termfreq to stop compiler optimising away the
-		// call to get_termfreq().
-		TEST_EXCEPTION(Xapian::InvalidOperationError,
-			       if (i.get_termfreq()) FAIL_TEST("?"));
-		TEST_NOT_EQUAL(0, j.get_termfreq());
-		if (*i == "foobar") {
-		    // termfreq of foobar is 2
-		    TEST_EQUAL(2, j.get_termfreq());
-		} else {
-		    // termfreq of rising is 1
-		    TEST_EQUAL(*i, "rising");
-		    TEST_EQUAL(1, j.get_termfreq());
+		if (!sharded) {
+		    // Actually use termfreq to stop compiler optimising away the
+		    // call to get_termfreq().
+		    TEST_EXCEPTION(Xapian::InvalidOperationError,
+				   if (i.get_termfreq()) FAIL_TEST("?"));
+		    TEST_NOT_EQUAL(0, j.get_termfreq());
+		    if (*i == "foobar") {
+			// termfreq of foobar is 2
+			TEST_EQUAL(2, j.get_termfreq());
+		    } else {
+			// termfreq of rising is 1
+			TEST_EQUAL(*i, "rising");
+			TEST_EQUAL(1, j.get_termfreq());
+		    }
 		}
 		Xapian::PositionIterator k(i.positionlist_begin());
 		Xapian::PositionIterator l(j.positionlist_begin());
@@ -1334,18 +1358,20 @@ DEFINE_TESTCASE(emptyterm2, writable) {
 
 // Check that PHRASE/NEAR becomes AND if there's no positional info in the
 // database.
-DEFINE_TESTCASE(phraseorneartoand1, writable) {
-    Xapian::WritableDatabase db = get_writable_database();
-
-    for (int n = 1; n <= 20; ++n) {
-	Xapian::Document doc;
-	doc.add_term(str(n));
-	doc.add_term(str(n ^ 9));
-	doc.add_term("all");
-	doc.set_data("pass1");
-	db.add_document(doc);
-    }
-    db.commit();
+DEFINE_TESTCASE(phraseorneartoand1, backend) {
+    Xapian::Database db = get_database("phraseorneartoand1",
+				       [](Xapian::WritableDatabase& wdb,
+					  const string&)
+				       {
+					   for (int n = 1; n <= 20; ++n) {
+					       Xapian::Document doc;
+					       doc.add_term(str(n));
+					       doc.add_term(str(n ^ 9));
+					       doc.add_term("all");
+					       doc.set_data("pass1");
+					       wdb.add_document(doc);
+					   }
+				       });
 
     Xapian::Enquire enquire(db);
     Xapian::MSet mymset;
@@ -1369,14 +1395,11 @@ DEFINE_TESTCASE(phraseorneartoand1, writable) {
     TEST_EQUAL(0, mymset.size());
 }
 
-// Check that a large number of position list entries for a particular term
-// works - regression test for flint.
-DEFINE_TESTCASE(longpositionlist1, writable) {
-    Xapian::WritableDatabase db = get_writable_database();
-
+static void
+gen_longpositionlist1_db(Xapian::WritableDatabase& db, const string&)
+{
     Xapian::Document doc;
-    Xapian::termpos n;
-    for (n = 1; n <= 2000; ++n) {
+    for (Xapian::termpos n = 1; n <= 2000; ++n) {
 	doc.add_posting("fork", n * 3);
 	doc.add_posting("knife", n * unsigned(log(double(n + 2))));
 	doc.add_posting("spoon", n * n);
@@ -1389,10 +1412,16 @@ DEFINE_TESTCASE(longpositionlist1, writable) {
 	}
     }
     doc.set_data("cutlery");
-    Xapian::docid did = db.add_document(doc);
-    db.commit();
+    db.add_document(doc);
+}
 
-    doc = db.get_document(did);
+// Check that a large number of position list entries for a particular term
+// works - regression test for flint.
+DEFINE_TESTCASE(longpositionlist1, backend) {
+    Xapian::Database db = get_database("longpositionlist1",
+				       gen_longpositionlist1_db);
+
+    Xapian::Document doc = db.get_document(1);
 
     Xapian::TermIterator t, tend;
     Xapian::PositionIterator p, pend;
@@ -1404,7 +1433,7 @@ DEFINE_TESTCASE(longpositionlist1, writable) {
     TEST_EQUAL(*t, "chopsticks");
     p = t.positionlist_begin();
     pend = t.positionlist_end();
-    for (n = 1; n <= 2000; ++n) {
+    for (Xapian::termpos n = 1; n <= 2000; ++n) {
 	TEST(p != pend);
 	Xapian::termpos half_cube = n * n / 2 * n;
 	TEST_EQUAL(*p, half_cube);
@@ -1417,7 +1446,7 @@ DEFINE_TESTCASE(longpositionlist1, writable) {
     TEST_EQUAL(*t, "fork");
     p = t.positionlist_begin();
     pend = t.positionlist_end();
-    for (n = 1; n <= 2000; ++n) {
+    for (Xapian::termpos n = 1; n <= 2000; ++n) {
 	TEST(p != pend);
 	TEST_EQUAL(*p, n * 3);
 	++p;
@@ -1429,7 +1458,7 @@ DEFINE_TESTCASE(longpositionlist1, writable) {
     TEST_EQUAL(*t, "knife");
     p = t.positionlist_begin();
     pend = t.positionlist_end();
-    for (n = 1; n <= 2000; ++n) {
+    for (Xapian::termpos n = 1; n <= 2000; ++n) {
 	TEST(p != pend);
 	TEST_EQUAL(*p, n * unsigned(log(double(n + 2))));
 	++p;
@@ -1441,7 +1470,7 @@ DEFINE_TESTCASE(longpositionlist1, writable) {
     TEST_EQUAL(*t, "spoon");
     p = t.positionlist_begin();
     pend = t.positionlist_end();
-    for (n = 1; n <= 2000; ++n) {
+    for (Xapian::termpos n = 1; n <= 2000; ++n) {
 	TEST(p != pend);
 	TEST_EQUAL(*p, n * n);
 	++p;
@@ -1454,7 +1483,7 @@ DEFINE_TESTCASE(longpositionlist1, writable) {
 	TEST_EQUAL(*t, "spork");
 	p = t.positionlist_begin();
 	pend = t.positionlist_end();
-	for (n = 1; n <= 2000; ++n) {
+	for (Xapian::termpos n = 1; n <= 2000; ++n) {
 	    TEST(p != pend);
 	    Xapian::termpos half_cube = n * n / 2 * n;
 	    TEST_EQUAL(*p, half_cube * half_cube);
@@ -1467,15 +1496,13 @@ DEFINE_TESTCASE(longpositionlist1, writable) {
     TEST(t == tend);
 }
 
-// Regression test for bug#110: Inconsistent sort order between pages with
-// set_sort_by_value_then_relevance.
-DEFINE_TESTCASE(consistency2, writable) {
-    Xapian::WritableDatabase db = get_writable_database();
+static void
+gen_consistency2_db(Xapian::WritableDatabase& db, const string&)
+{
     char buf[2] = "X";
-    int i = 0;
 
     // Add 5 documents indexed by "test" with wdf 1.
-    for (i = 0; i < 5; ++i) {
+    for (int i = 0; i < 5; ++i) {
 	Xapian::Document doc;
 	*buf = '0' + i;
 	doc.add_value(0, buf);
@@ -1484,15 +1511,19 @@ DEFINE_TESTCASE(consistency2, writable) {
     }
 
     // Add 5 documents indexed by "test" with wdf 2.
-    for (i = 0; i < 5; ++i) {
+    for (int i = 0; i < 5; ++i) {
 	Xapian::Document doc;
 	*buf = '0' + i;
 	doc.add_value(0, buf);
 	doc.add_term("test", 2);
 	db.add_document(doc);
     }
+}
 
-    db.commit();
+// Regression test for bug#110: Inconsistent sort order between pages with
+// set_sort_by_value_then_relevance.
+DEFINE_TESTCASE(consistency2, backend) {
+    Xapian::Database db = get_database("consistency2", gen_consistency2_db);
 
     Xapian::Enquire enq(db);
     enq.set_query(Xapian::Query("test"));
@@ -1513,7 +1544,7 @@ DEFINE_TESTCASE(consistency2, writable) {
 
     TEST_EQUAL(*mset1[0], *mset2a[0]);
     TEST_EQUAL(*mset1[1], *mset2b[0]);
-    for (i = 0; i < 8; ++i) {
+    for (Xapian::doccount i = 0; i < 8; ++i) {
 	TEST_EQUAL(*mset1[i + 2], *mset2c[i]);
     }
 }
@@ -1610,7 +1641,8 @@ DEFINE_TESTCASE(crashrecovery1, chert) {
 // Regression test for bug#152.
 DEFINE_TESTCASE(nomoredocids1, writable) {
     // The InMemory backend uses a vector for the documents, so trying to add
-    // document "-1" will fail because we can't allocate enough memory!
+    // a document with a really large docid will fail because we can't allocate
+    // enough memory!
     SKIP_TEST_FOR_BACKEND("inmemory");
 
     Xapian::WritableDatabase db = get_writable_database();
@@ -1618,12 +1650,15 @@ DEFINE_TESTCASE(nomoredocids1, writable) {
     doc.set_data("prose");
     doc.add_term("word");
 
-    // FIXME: This probably should use the _MAX_DOCID values
-    Xapian::docid max_id = 0xffffffff;
-
+    Xapian::docid max_id = numeric_limits<Xapian::docid>::max();
     db.replace_document(max_id, doc);
 
     TEST_EXCEPTION(Xapian::DatabaseError, db.add_document(doc));
+
+    // Also test replace_document() by term which will try to add a new
+    // document if the term isn't present - that should also fail if the
+    // docid counter would wrap.
+    TEST_EXCEPTION(Xapian::DatabaseError, db.replace_document("Q42", doc));
 }
 
 // Test synonym iterators.
@@ -1748,7 +1783,7 @@ DEFINE_TESTCASE(termtoolong1, writable) {
 
     for (size_t i = 246; i <= 290; ++i) {
 	tout.str(string());
-	tout << "Term length " << i << endl;
+	tout << "Term length " << i << '\n';
 	Xapian::Document doc;
 	string term(i, 'X');
 	doc.add_term(term);
@@ -1759,14 +1794,14 @@ DEFINE_TESTCASE(termtoolong1, writable) {
 	    // Check that the max length is correctly expressed in the
 	    // exception message - we've got this wrong in two different ways
 	    // in the past!
-	    tout << e.get_msg() << endl;
+	    tout << e.get_msg() << '\n';
 	    TEST(e.get_msg().find("Term too long (> 245)") != string::npos);
 	}
     }
 
     for (size_t j = 240; j <= 245; ++j) {
 	tout.str(string());
-	tout << "Term length " << j << endl;
+	tout << "Term length " << j << '\n';
 	Xapian::Document doc;
 	string term(j, 'X');
 	doc.add_term(term);
@@ -1790,7 +1825,7 @@ DEFINE_TESTCASE(termtoolong1, writable) {
 	    // Check that the max length is correctly expressed in the
 	    // exception message - we've got this wrong in two different ways
 	    // in the past!
-	    tout << e.get_msg() << endl;
+	    tout << e.get_msg() << '\n';
 	    string target = " is ";
 	    target += str(limit);
 	    target += " bytes";
@@ -1856,28 +1891,26 @@ DEFINE_TESTCASE(postlist7, writable) {
     TEST(p == db_w.postlist_end("foo"));
 }
 
-DEFINE_TESTCASE(lazytablebug1, chert || glass) {
-    {
-	Xapian::WritableDatabase db = get_named_writable_database("lazytablebug1", string());
+static void
+gen_lazytablebug1_db(Xapian::WritableDatabase& db, const string&)
+{
+    Xapian::Document doc;
+    doc.add_term("foo");
+    db.add_document(doc);
+    db.commit();
 
-	Xapian::Document doc;
-	doc.add_term("foo");
-	db.add_document(doc);
-	db.commit();
-
-	string synonym(255, 'x');
-	char buf[] = " iamafish!!!!!!!!!!";
-	for (int i = 33; i < 120; ++i) {
-	    db.add_synonym(buf, synonym);
-	    ++buf[0];
-	}
-
-	db.commit();
+    string synonym(255, 'x');
+    char buf[] = " iamafish!!!!!!!!!!";
+    for (int i = 33; i < 120; ++i) {
+	db.add_synonym(buf, synonym);
+	++buf[0];
     }
+}
 
-    Xapian::Database db = get_writable_database_as_database();
+DEFINE_TESTCASE(lazytablebug1, synonyms) {
+    Xapian::Database db = get_database("lazytablebug1", gen_lazytablebug1_db);
     for (Xapian::TermIterator t = db.synonym_keys_begin(); t != db.synonym_keys_end(); ++t) {
-	tout << *t << endl;
+	tout << *t << '\n';
     }
 }
 
@@ -2070,4 +2103,10 @@ DEFINE_TESTCASE(protocolbug1, remote && writable) {
     TEST_EXCEPTION(Xapian::InvalidArgumentError,
 		   db.replace_document(1, doc));
     db.commit();
+}
+
+DEFINE_TESTCASE(remotefdleak1, remote && writable) {
+    Xapian::WritableDatabase wdb = get_writable_database("");
+    TEST_EXCEPTION(Xapian::DatabaseLockError,
+		   auto wdb2 = get_writable_database_again());
 }

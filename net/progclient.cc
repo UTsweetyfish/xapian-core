@@ -77,7 +77,7 @@ string
 ProgClient::get_progcontext(const string &progname, const string &args)
 {
     LOGCALL_STATIC(DB, string, "ProgClient::get_progcontext", progname | args);
-    RETURN("remote:prog(" + progname + " " + args);
+    RETURN("remote:prog(" + progname + " " + args + ")");
 }
 
 int
@@ -101,14 +101,25 @@ ProgClient::run_program(const string &progname, const string &args,
 	throw Xapian::NetworkError(string("socketpair failed"), get_progcontext(progname, args), errno);
     }
 
+    // Do the steps of splitting args into an argv[] array which need to
+    // allocate memory before we call fork() since in a multi-threaded program
+    // (which we might be used in) it's only safe to call async-signal-safe
+    // functions in the child process after fork() until exec, and malloc, etc
+    // aren't async-signal-safe.
+    vector<string> argvec;
+    split_words(args, argvec);
+    const char **new_argv = new const char *[argvec.size() + 2];
+
     child = fork();
 
     if (child < 0) {
+	delete [] new_argv;
 	throw Xapian::NetworkError(string("fork failed"), get_progcontext(progname, args), errno);
     }
 
     if (child != 0) {
 	// parent
+	delete [] new_argv;
 	// close the child's end of the socket
 	::close(sv[1]);
 	RETURN(sv[0]);
@@ -146,20 +157,13 @@ ProgClient::run_program(const string &progname, const string &args,
     // Redirect stderr to /dev/null
     int stderrfd = open("/dev/null", O_WRONLY);
     if (stderrfd == -1) {
-	throw Xapian::NetworkError(string("Redirecting stderr to /dev/null failed"), get_progcontext(progname, args), errno);
+	_exit(-1);
     }
     if (stderrfd != 2) {
 	// Not sure why it wouldn't be 2, but handle the situation anyway.
 	dup2(stderrfd, 2);
 	::close(stderrfd);
     }
-
-    vector<string> argvec;
-    split_words(args, argvec);
-
-    // We never explicitly free this memory, but that's OK as we're about
-    // to either execvp() or _exit().
-    const char **new_argv = new const char *[argvec.size() + 2];
 
     new_argv[0] = progname.c_str();
     for (vector<string>::size_type i = 0; i < argvec.size(); ++i) {
@@ -226,9 +230,12 @@ ProgClient::run_program(const string &progname, const string &args,
     startupinfo.hStdInput = hClient;
     startupinfo.dwFlags |= STARTF_USESTDHANDLES;
 
-    // For some reason Windows wants a modifiable command line!
-    string cmdline = progname + ' ' + args;
-    BOOL ok = CreateProcess(0, &cmdline[0], 0, 0, TRUE, 0, 0, 0,
+    string cmdline{progname};
+    cmdline += ' ';
+    cmdline += args;
+    // For some reason Windows wants a modifiable command line so we
+    // pass `&cmdline[0]` rather than `cmdline.c_str()`.
+    BOOL ok = CreateProcess(progname.c_str(), &cmdline[0], 0, 0, TRUE, 0, 0, 0,
 			    &startupinfo, &procinfo);
     if (!ok) {
 	throw Xapian::NetworkError("CreateProcess failed",

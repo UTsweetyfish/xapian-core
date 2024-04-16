@@ -1,7 +1,7 @@
 /** @file
  * @brief Unit tests of non-Xapian-specific internal code.
  */
-/* Copyright (C) 2006,2007,2009,2010,2012,2015,2016,2018,2019 Olly Betts
+/* Copyright (C) 2006-2024 Olly Betts
  * Copyright (C) 2007 Richard Boulton
  *
  * This program is free software; you can redistribute it and/or
@@ -76,9 +76,11 @@ using namespace std;
 // Code we're unit testing:
 #include "../common/closefrom.cc"
 #include "../common/errno_to_string.cc"
+#include "../common/io_utils.cc"
 #include "../common/fileutils.cc"
 #include "../common/overflow.h"
 #include "../common/parseint.h"
+#include "../common/posixy_wrapper.cc"
 #include "../common/serialise-double.cc"
 #include "../common/str.cc"
 #include "../backends/uuids.cc"
@@ -90,7 +92,7 @@ using namespace std;
 // fileutils.cc uses opendir(), etc though not in a function we currently test.
 #include "../common/msvc_dirent.cc"
 
-// The UUID code uses hexdigit().
+// The UUID code uses hex_decode().
 #include "../api/constinfo.cc"
 
 // Stub replacement, which doesn't deal with escaping or producing valid UTF-8.
@@ -218,9 +220,9 @@ check_double_serialisation(double u)
     const char * end = ptr[1] + encoded.size();
     double v = unserialise_double(&(ptr[1]), end);
     if (ptr[1] != end || u != v) {
-	cout << u << " -> " << v << ", difference = " << v - u << endl;
-	cout << "FLT_RADIX = " << FLT_RADIX << endl;
-	cout << "DBL_MAX_EXP = " << DBL_MAX_EXP << endl;
+	cout << u << " -> " << v << ", difference = " << v - u << '\n';
+	cout << "FLT_RADIX = " << FLT_RADIX << '\n';
+	cout << "DBL_MAX_EXP = " << DBL_MAX_EXP << '\n';
     }
     TEST_EQUAL(static_cast<const void*>(ptr[1]), static_cast<const void*>(end));
 }
@@ -267,7 +269,7 @@ static void test_serialiselength1()
 	const char *p_end = p + s.size();
 	size_t decoded_n;
 	decode_length(&p, p_end, decoded_n);
-	if (n != decoded_n || p != p_end) tout << "[" << s << "]" << endl;
+	if (n != decoded_n || p != p_end) tout << "[" << s << "]\n";
 	TEST_EQUAL(n, decoded_n);
 	TEST_EQUAL(p_end - p, 0);
 	if (n < 5000) {
@@ -416,9 +418,6 @@ static void test_log2()
 }
 
 static const double test_sortableserialise_numbers[] = {
-#ifdef INFINITY
-    -INFINITY,
-#endif
     -HUGE_VAL,
     -DBL_MAX,
     -exp2(1022),
@@ -460,9 +459,6 @@ static const double test_sortableserialise_numbers[] = {
     exp2(1022),
     DBL_MAX,
     HUGE_VAL,
-#ifdef INFINITY
-    INFINITY,
-#endif
 
     64 // Magic number which we stop at.
 };
@@ -512,7 +508,7 @@ template<typename S>
 inline static void tostring_helper() {
     const S max_val = numeric_limits<S>::max();
     const S min_val = numeric_limits<S>::min();
-    tout << "Testing with tostring_helper" << endl;
+    tout << "Testing with tostring_helper\n";
     std::ostringstream oss;
     oss << (long long)max_val;
     TEST_EQUAL(str(max_val), oss.str());
@@ -745,18 +741,71 @@ static void test_movesupport1()
 
 static void test_addoverflows1()
 {
+    const auto ulong_max = numeric_limits<unsigned long>::max();
+    const auto uint_max = numeric_limits<unsigned int>::max();
+    const auto ushort_max = numeric_limits<unsigned short>::max();
+    const auto uchar_max = numeric_limits<unsigned char>::max();
+
+    unsigned long res_ulong;
+    unsigned res_uint;
+    unsigned short res_ushort;
+    unsigned char res_uchar;
+
+    TEST(!add_overflows(0UL, 0UL, res_ulong));
+    TEST_EQUAL(res_ulong, 0);
+    TEST(!add_overflows(0UL, 0UL, res_uint));
+    TEST_EQUAL(res_uint, 0);
+    TEST(!add_overflows(0UL, 0UL, res_ushort));
+    TEST_EQUAL(res_ushort, 0);
+    TEST(!add_overflows(0UL, 0UL, res_uchar));
+    TEST_EQUAL(res_uchar, 0);
+
+    TEST(add_overflows(ulong_max, 1UL, res_ulong));
+    TEST_EQUAL(res_ulong, 0);
+    TEST(add_overflows(uint_max, 1UL, res_uint));
+    TEST_EQUAL(res_uint, 0);
+    TEST(add_overflows(ushort_max, 1UL, res_ushort));
+    TEST_EQUAL(res_ushort, 0);
+    TEST(add_overflows(uchar_max, 1UL, res_uchar));
+    TEST_EQUAL(res_uchar, 0);
+
+    TEST(add_overflows(1UL, ulong_max, res_ulong));
+    TEST_EQUAL(res_ulong, 0);
+    TEST(add_overflows(1UL, uint_max, res_uint));
+    TEST_EQUAL(res_uint, 0);
+    TEST(add_overflows(1UL, ushort_max, res_ushort));
+    TEST_EQUAL(res_ushort, 0);
+    TEST(add_overflows(1UL, uchar_max, res_uchar));
+    TEST_EQUAL(res_uchar, 0);
+
+    TEST(add_overflows(ulong_max, ulong_max, res_ulong));
+    TEST_EQUAL(res_ulong, ulong_max - 1UL);
+    TEST(add_overflows(uint_max, uint_max, res_uint));
+    TEST_EQUAL(res_uint, uint_max - 1UL);
+    TEST(add_overflows(ushort_max, ushort_max, res_ushort));
+    TEST_EQUAL(res_ushort, ushort_max - 1UL);
+    TEST(add_overflows(uchar_max, uchar_max, res_uchar));
+    TEST_EQUAL(res_uchar, uchar_max - 1UL);
+
+    res_uchar = 1;
+    TEST(add_overflows(res_uchar, unsigned(uchar_max) + 1U, res_uchar));
+    TEST_EQUAL(res_uchar, 1);
+}
+
+static void test_suboverflows1()
+{
     unsigned long res;
-    TEST(!add_overflows(0UL, 0UL, res));
+    TEST(!sub_overflows(0UL, 0UL, res));
     TEST_EQUAL(res, 0);
 
-    TEST(add_overflows(ULONG_MAX, 1UL, res));
-    TEST_EQUAL(res, 0);
+    TEST(sub_overflows(0UL, 1UL, res));
+    TEST_EQUAL(res, ULONG_MAX);
 
-    TEST(add_overflows(1UL, ULONG_MAX, res));
-    TEST_EQUAL(res, 0);
+    TEST(sub_overflows(ULONG_MAX - 1UL, ULONG_MAX, res));
+    TEST_EQUAL(res, ULONG_MAX);
 
-    TEST(add_overflows(ULONG_MAX, ULONG_MAX, res));
-    TEST_EQUAL(res, ULONG_MAX - 1UL);
+    TEST(sub_overflows(0UL, ULONG_MAX, res));
+    TEST_EQUAL(res, 1);
 }
 
 static void test_muloverflows1()
@@ -790,7 +839,7 @@ template<typename U>
 inline static void parseunsigned_helper() {
     U val;
     const U max_val = numeric_limits<U>::max();
-    tout << "Testing with parseunsigned_helper" << endl;
+    tout << "Testing with parseunsigned_helper\n";
     TEST(parse_unsigned("0", val));
     TEST_EQUAL(val, 0);
     TEST(parse_unsigned("99", val));
@@ -820,7 +869,7 @@ inline static void parsesigned_helper() {
     S val;
     const S max_val = numeric_limits<S>::max();
     const S min_val = numeric_limits<S>::min();
-    tout << "Testing with parsesigned_helper" << endl;
+    tout << "Testing with parsesigned_helper\n";
     TEST(parse_signed("0", val));
     TEST_EQUAL(val, 0);
     TEST(parse_signed("99", val));
@@ -854,6 +903,104 @@ static void test_parsesigned1()
     parsesigned_helper<long long>();
 }
 
+/// Test working with a block-based file using functions from io_utils.h.
+static void test_ioblock1()
+try {
+    const char* tmp_file = ".unittest_ioutils1";
+    int fd = -1;
+    try {
+	constexpr int BLOCK_SIZE = 1024;
+
+	fd = io_open_block_wr(tmp_file, true);
+	TEST_REL(fd, >=, 0);
+
+	string buf(BLOCK_SIZE, 'x');
+	string out;
+
+	// ZFS default blocksize is 128K so we need to write at least that far
+	// into the file to be able to successfully detect support for sparse
+	// files below.  We won't detect sparse file support if the blocksize
+	// is larger, but that's not a problem.
+	io_write_block(fd, buf.data(), BLOCK_SIZE, 128);
+	out.resize(BLOCK_SIZE);
+	io_read_block(fd, &out[0], BLOCK_SIZE, 128);
+	TEST(buf == out);
+
+	// Call io_sync() and check it claims to work.  Checking it actually has
+	// any effect is much harder to do.
+	TEST(io_sync(fd));
+
+	io_write_block(fd, buf.data(), BLOCK_SIZE, 129);
+	out.resize(BLOCK_SIZE);
+	io_read_block(fd, &out[0], BLOCK_SIZE, 129);
+	TEST(buf == out);
+
+	// Call io_full_sync() and check it claims to work.  Checking it actually
+	// has any effect is much harder to do.
+	TEST(io_full_sync(fd));
+
+	if (sizeof(off_t) <= 4) {
+	    SKIP_TEST("Skipping rest of testcase - no Large File Support");
+	}
+
+#ifdef SEEK_HOLE
+	struct stat statbuf;
+	TEST(fstat(fd, &statbuf) == 0);
+
+	off_t hole = lseek(fd, 0, SEEK_HOLE);
+	if (hole < 0) {
+	    SKIP_TEST("Skipping rest of testcase - SEEK_HOLE failed");
+	}
+	if (hole >= statbuf.st_size) {
+	    SKIP_TEST("Skipping rest of testcase - sparse file support not "
+		      "detected");
+	}
+
+	// Write a block at an offset a little above 4GB and check that we wrote
+	// the specified block by checking the filesize.  This should catch bugs
+	// which truncate the offset used.
+	constexpr off_t high_offset = (off_t{1} << 32) + BLOCK_SIZE;
+	constexpr off_t high_block = high_offset / BLOCK_SIZE;
+	try {
+	    io_write_block(fd, buf.data(), BLOCK_SIZE, high_block);
+	} catch (const Xapian::DatabaseError& e) {
+	    if (e.get_error_string() == errno_to_string(EFBIG))
+		SKIP_TEST("Skipping rest of testcase - FS doesn't allow a > 4GB "
+			  "file");
+	    throw;
+	}
+	TEST(fstat(fd, &statbuf) == 0);
+	TEST_EQUAL(statbuf.st_size, high_offset + BLOCK_SIZE);
+
+	close(fd);
+
+	fd = io_open_block_rd(tmp_file);
+
+	// We can't easily test that io_readahead_block() actually does anything if
+	// it returns true, but we can at least call it to check it doesn't crash.
+	(void)io_readahead_block(fd, BLOCK_SIZE, high_block);
+
+	// Check we can read back the same data we wrote.
+	io_read_block(fd, &out[0], BLOCK_SIZE, high_block);
+	TEST(buf == out);
+
+	close(fd);
+	fd = -1;
+	io_unlink(tmp_file);
+#else
+	SKIP_TEST("Skipping rest of testcase - SEEK_HOLE not supported");
+#endif
+    } catch (...) {
+	close(fd);
+	io_unlink(tmp_file);
+	throw;
+    }
+} catch (const Xapian::Error& e) {
+    // Translate Xapian::Error exceptions to std::string exceptions which
+    // utestsuite can catch.
+    throw e.get_description();
+}
+
 static const test_desc tests[] = {
     TESTCASE(simple_exceptions_work1),
     TESTCASE(class_exceptions_work1),
@@ -872,9 +1019,11 @@ static const test_desc tests[] = {
     TESTCASE(uuid1),
     TESTCASE(movesupport1),
     TESTCASE(addoverflows1),
+    TESTCASE(suboverflows1),
     TESTCASE(muloverflows1),
     TESTCASE(parseunsigned1),
     TESTCASE(parsesigned1),
+    TESTCASE(ioblock1),
     END_OF_TESTCASES
 };
 
@@ -883,6 +1032,6 @@ try {
     test_driver::parse_command_line(argc, argv);
     return test_driver::run(tests);
 } catch (const char * e) {
-    cout << e << endl;
+    cout << e << '\n';
     return 1;
 }

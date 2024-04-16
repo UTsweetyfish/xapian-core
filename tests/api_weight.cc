@@ -518,7 +518,7 @@ gen_wdf_eq_doclen_db(Xapian::WritableDatabase& db, const string&)
 }
 
 // Test wdf == doclen.
-DEFINE_TESTCASE(dlhweight3, generated) {
+DEFINE_TESTCASE(dlhweight3, backend) {
     Xapian::Database db = get_database("wdf_eq_doclen", gen_wdf_eq_doclen_db);
     Xapian::Enquire enquire(db);
     Xapian::Query query("solo");
@@ -721,7 +721,7 @@ DEFINE_TESTCASE(dphweight2, !backend) {
 }
 
 // Test wdf == doclen.
-DEFINE_TESTCASE(dphweight3, generated) {
+DEFINE_TESTCASE(dphweight3, backend) {
     Xapian::Database db = get_database("wdf_eq_doclen", gen_wdf_eq_doclen_db);
     Xapian::Enquire enquire(db);
     Xapian::Query query("solo");
@@ -1031,7 +1031,7 @@ class CheckStatsWeight : public Xapian::Weight {
 		for (auto&& t = db.allterms_begin(term1);
 		     t != db.allterms_end(term1); ++t) {
 		    Xapian::doccount tf = t.get_termfreq();
-		    tout << "->" << *t << " " << tf << endl;
+		    tout << "->" << *t << " " << tf << '\n';
 		    tfsum += tf;
 		    tfmax = max(tfmax, tf);
 		    Xapian::termcount cf = db.get_collection_freq(*t);
@@ -1136,7 +1136,7 @@ DEFINE_TESTCASE(checkstatsweight2, backend && !remote) {
 	const string & term2 = *a;
 	Xapian::Query q(Xapian::Query::OP_SYNONYM,
 			Xapian::Query(term1), Xapian::Query(term2));
-	tout << q.get_description() << endl;
+	tout << q.get_description() << '\n';
 	enquire.set_query(q);
 	Xapian::termcount sum = 0;
 	Xapian::termcount sum_squares = 0;
@@ -1219,7 +1219,7 @@ DEFINE_TESTCASE(checkstatsweight3, backend && !remote && !multi) {
     };
     for (auto pattern : testcases) {
 	Xapian::Query q(Xapian::Query::OP_WILDCARD, pattern);
-	tout << q.get_description() << endl;
+	tout << q.get_description() << '\n';
 	enquire.set_query(q);
 	Xapian::termcount sum = 0;
 	Xapian::termcount sum_squares = 0;
@@ -1355,7 +1355,7 @@ DEFINE_TESTCASE(unigramlmweight5, backend) {
     TEST_EQUAL(mset2.size(), 5);
     TEST_EQUAL(mset3.size(), 5);
     TEST_EQUAL(mset4.size(), 5);
-    for (size_t i = 0; i < 5; ++i) {
+    for (Xapian::doccount i = 0; i < 5; ++i) {
 	TEST_EQUAL_DOUBLE(mset3[i].get_weight(), mset4[i].get_weight());
 	TEST_EQUAL_DOUBLE(mset2[i].get_weight(), mset4[i].get_weight());
 	TEST_EQUAL_DOUBLE(mset1[i].get_weight(), mset2[i].get_weight());

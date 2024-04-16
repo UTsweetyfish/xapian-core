@@ -3,7 +3,7 @@
  */
 /* Copyright 1999,2000,2001 BrightStation PLC
  * Copyright 2002 Ananova Ltd
- * Copyright 2002,2003,2004,2005,2006,2007,2008,2009,2011,2012,2013,2015,2016,2017,2019 Olly Betts
+ * Copyright 2002-2023 Olly Betts
  * Copyright 2006,2007,2008,2009 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or
@@ -68,12 +68,12 @@ DEFINE_TESTCASE(termstats, backend) {
 }
 
 // Check that stub databases work.
-DEFINE_TESTCASE(stubdb1, path) {
+DEFINE_TESTCASE(stubdb1, check && path) {
     mkdir(".stub", 0755);
     const char * dbpath = ".stub/stubdb1";
     ofstream out(dbpath);
     TEST(out.is_open());
-    out << "auto ../" << get_database_path("apitest_simpledata") << endl;
+    out << "auto ../" << get_database_path("apitest_simpledata") << '\n';
     out.close();
 
     {
@@ -99,7 +99,7 @@ DEFINE_TESTCASE(stubdb2, path) {
     ofstream out(dbpath);
     TEST(out.is_open());
     out << "remote :" << BackendManager::get_xapian_progsrv_command()
-	<< ' ' << get_database_path("apitest_simpledata") << endl;
+	<< ' ' << get_database_path("apitest_simpledata") << '\n';
     out.close();
 
     try {
@@ -126,7 +126,7 @@ DEFINE_TESTCASE(stubdb2, path) {
 
     out.open(dbpath);
     TEST(out.is_open());
-    out << "remote" << endl;
+    out << "remote\n";
     out.close();
 
     // Quietly ignored prior to 1.4.1.
@@ -147,7 +147,7 @@ DEFINE_TESTCASE(stubdb2, path) {
 
     out.open(dbpath);
     TEST(out.is_open());
-    out << "remote foo" << endl;
+    out << "remote foo\n";
     out.close();
 
     // Quietly ignored prior to 1.4.1.
@@ -163,7 +163,7 @@ DEFINE_TESTCASE(stubdb2, path) {
 #ifdef XAPIAN_HAS_REMOTE_BACKEND
     out.open(dbpath);
     TEST(out.is_open());
-    out << "remote [::1]:65535" << endl;
+    out << "remote [::1]:65535\n";
     out.close();
 
     try {
@@ -173,7 +173,7 @@ DEFINE_TESTCASE(stubdb2, path) {
 	//  NetworkError: Couldn't resolve host [ (context: remote:tcp([:0)) (No address associated with hostname)
 	// 1.4.1 throws (because we don't actually support IPv6 yet) on Linux (EAI_ADDRFAMILY):
 	//  NetworkError: Couldn't resolve host ::1 (context: remote:tcp(::1:65535)) (nodename nor servname provided, or not known)
-	// or on OS X (EAI_NONAME):
+	// or on macOS (EAI_NONAME):
 	//  NetworkError: Couldn't resolve host ::1 (context: remote:tcp(::1:65535)) (Address family for hostname not supported)
 	//
 	// But NetBSD seems to resolve ::1 to an IPv4 address and then tries
@@ -189,7 +189,7 @@ DEFINE_TESTCASE(stubdb2, path) {
 	//  NetworkError: Couldn't resolve host [ (context: remote:tcp([:0)) (No address associated with hostname)
 	// 1.4.1 throws (because we don't actually support IPv6 yet) on Linux (EAI_ADDRFAMILY):
 	//  NetworkError: Couldn't resolve host ::1 (context: remote:tcp(::1:65535)) (nodename nor servname provided, or not known)
-	// or on OS X (EAI_NONAME):
+	// or on macOS (EAI_NONAME):
 	//  NetworkError: Couldn't resolve host ::1 (context: remote:tcp(::1:65535)) (Address family for hostname not supported)
 	// So we test the message instead of the error string for portability.
 	//
@@ -203,7 +203,7 @@ DEFINE_TESTCASE(stubdb2, path) {
     out.open(dbpath);
     TEST(out.is_open());
     // Invalid - the port number is required.
-    out << "remote [::1]" << endl;
+    out << "remote [::1]\n";
     out.close();
 
     // 1.4.0 threw:
@@ -260,7 +260,7 @@ DEFINE_TESTCASE(stubdb5, path) {
     ofstream out(dbpath);
     TEST(out.is_open());
     out << "bad\n"
-	   "auto ../" << get_database_path("apitest_simpledata") << endl;
+	   "auto ../" << get_database_path("apitest_simpledata") << '\n';
     out.close();
 
     TEST_EXCEPTION(Xapian::DatabaseOpeningError,
@@ -342,7 +342,7 @@ DEFINE_TESTCASE(stubdb9, path) {
     ofstream out(dbpath);
     TEST(out.is_open());
     out << "remote :" << BackendManager::get_xapian_progsrv_command()
-	<< ' ' << get_database_path("apitest_simpledata") << endl;
+	<< ' ' << get_database_path("apitest_simpledata") << '\n';
     out.close();
 
     try {
@@ -1461,7 +1461,7 @@ DEFINE_TESTCASE(sortvalue1, backend) {
 
     for (int pass = 1; pass <= 2; ++pass) {
 	for (Xapian::valueno value_no = 1; value_no < 7; ++value_no) {
-	    tout << "Sorting on value " << value_no << endl;
+	    tout << "Sorting on value " << value_no << '\n';
 	    enquire.set_sort_by_value(value_no, true);
 	    Xapian::MSet allbset = enquire.get_mset(0, 100);
 	    Xapian::MSet partbset1 = enquire.get_mset(0, 3);
@@ -1473,7 +1473,7 @@ DEFINE_TESTCASE(sortvalue1, backend) {
 	    Xapian::MSetIterator i, j;
 	    j = allbset.begin();
 	    for (i = partbset1.begin(); i != partbset1.end(); ++i) {
-		tout << "Entry " << n << ": " << *i << " | " << *j << endl;
+		tout << "Entry " << n << ": " << *i << " | " << *j << '\n';
 		TEST(j != allbset.end());
 		if (*i != *j) ok = false;
 		++j;
@@ -1481,7 +1481,7 @@ DEFINE_TESTCASE(sortvalue1, backend) {
 	    }
 	    tout << "===\n";
 	    for (i = partbset2.begin(); i != partbset2.end(); ++i) {
-		tout << "Entry " << n << ": " << *i << " | " << *j << endl;
+		tout << "Entry " << n << ": " << *i << " | " << *j << '\n';
 		TEST(j != allbset.end());
 		if (*i != *j) ok = false;
 		++j;
@@ -1514,7 +1514,7 @@ DEFINE_TESTCASE(consistency1, backend && !remote) {
 		    TEST_EQUAL(start + mset.size(),
 			       min(start + size, bigmset.size()));
 		} else if (size) {
-//		tout << start << mset.size() << bigmset.size() << endl;
+//		tout << start << mset.size() << bigmset.size() << '\n';
 		    TEST(start >= bigmset.size());
 		}
 		for (Xapian::doccount i = 0; i < mset.size(); ++i) {
@@ -1530,7 +1530,8 @@ DEFINE_TESTCASE(consistency1, backend && !remote) {
     }
 }
 
-// tests that specifying a nonexistent input file throws an exception.
+// Test that specifying a nonexistent input file throws an exception
+// (chert-specific cases).
 DEFINE_TESTCASE(chertdatabasenotfounderror1, chert) {
 #ifdef XAPIAN_HAS_CHERT_BACKEND
     mkdir(".chert", 0755);
@@ -1567,6 +1568,8 @@ DEFINE_TESTCASE(chertdatabasenotfounderror1, chert) {
 
 }
 
+// Test that specifying a nonexistent input file throws an exception
+// (glass-specific cases).
 DEFINE_TESTCASE(glassdatabasenotfounderror1, glass) {
 #ifdef XAPIAN_HAS_GLASS_BACKEND
     mkdir(".glass", 0755);
@@ -1600,6 +1603,25 @@ DEFINE_TESTCASE(glassdatabasenotfounderror1, glass) {
 	    Xapian::WritableDatabase(".glass/somefile",
 		Xapian::DB_CREATE_OR_OVERWRITE|Xapian::DB_BACKEND_GLASS));
 #endif
+}
+
+// Test that specifying a nonexistent input file throws an exception
+// (non-backend-specific cases).
+DEFINE_TESTCASE(databasenotfounderror2, !backend) {
+    TEST_EXCEPTION(Xapian::DatabaseNotFoundError,
+	    Xapian::Database("nosuchdirectory"));
+    TEST_EXCEPTION(Xapian::DatabaseNotFoundError,
+	    Xapian::Database("no/such/directory"));
+
+    TEST_EXCEPTION(Xapian::DatabaseNotFoundError,
+	    Xapian::WritableDatabase("nosuchdirectory", Xapian::DB_OPEN));
+    TEST_EXCEPTION(Xapian::DatabaseNotFoundError,
+	    Xapian::WritableDatabase("no/such/directory", Xapian::DB_OPEN));
+
+    string empty_dir = "emptydirectory";
+    mkdir(empty_dir.c_str(), 0700);
+    TEST_EXCEPTION(Xapian::DatabaseNotFoundError,
+	    Xapian::Database{empty_dir});
 }
 
 /// Test opening of a chert database
@@ -1684,7 +1706,7 @@ DEFINE_TESTCASE(sortrel1, backend) {
     static const Xapian::docid order9[] = { 7,6,2,9,5,1,8,4,3 };
 
     Xapian::MSet mset;
-    size_t i;
+    Xapian::doccount i;
 
     mset = enquire.get_mset(0, 10);
     TEST_EQUAL(mset.size(), sizeof(order1) / sizeof(Xapian::docid));
@@ -1838,7 +1860,7 @@ make_netstats1_db(Xapian::WritableDatabase& db, const string&)
 }
 
 // Test network stats and local stats give the same results.
-DEFINE_TESTCASE(netstats1, generated) {
+DEFINE_TESTCASE(netstats1, backend) {
     static const char * const words[] = { "paragraph", "word" };
     Xapian::Query query(Xapian::Query::OP_OR, words, words + 2);
     const size_t MSET_SIZE = 10;
@@ -1856,7 +1878,7 @@ DEFINE_TESTCASE(netstats1, generated) {
 	TEST_EQUAL(mset.get_matches_lower_bound(), 7);
 	TEST_EQUAL(mset.get_matches_upper_bound(), 7);
 	TEST_EQUAL(mset.get_matches_estimated(), 7);
-	TEST_EQUAL(mset.get_max_attained(), 1.445962071042388164);
+	TEST_EQUAL_DOUBLE(mset.get_max_attained(), 1.445962071042388164);
 	TEST_EQUAL(mset.size(), 7);
 
 	static const pair<Xapian::docid, double> to_compare[] = {

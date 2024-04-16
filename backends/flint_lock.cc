@@ -108,8 +108,8 @@ FlintLock::test() const
 	    int e = errno;
 	    close(lockfd);
 	    if (e == ENOSYS) {
-		// F_GETLK isn't implemented by GNU Hurd, and always fails with
-		// ENOSYS: https://bugs.debian.org/190367
+		// F_GETLK always failed with ENOSYS on older GNU Hurd libc
+		// versions: https://bugs.debian.org/190367
 		throw_cannot_test_lock();
 	    }
 	    reason why = (e == ENOLCK ? UNSUPPORTED : UNKNOWN);
@@ -217,9 +217,9 @@ retry:
 
 #ifdef F_OFD_SETLK
     // F_OFD_SETLK has exactly the semantics we want, so use it if it's
-    // available.  Support was added in Linux 3.15, and there's work on
-    // getting it standardised via POSIX:
-    // http://austingroupbugs.net/view.php?id=768
+    // available.  Support was added in Linux 3.15, and it was accepted
+    // for POSIX issue 8 on 2022-12-15:
+    // https://austingroupbugs.net/view.php?id=768
 
     // Use a static flag so we don't repeatedly try F_OFD_SETLK when
     // the kernel in use doesn't support it.  This should be safe in a

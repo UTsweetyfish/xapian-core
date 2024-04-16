@@ -21,9 +21,10 @@
 #ifndef XAPIAN_INCLUDED_SAFESYSSOCKET_H
 #define XAPIAN_INCLUDED_SAFESYSSOCKET_H
 
+// Some older BSDs require sys/types.h to be included first.  Also seems to
+// be needed for some mingw versions.
+#include <sys/types.h>
 #ifndef __WIN32__
-// Some older BSDs require sys/types.h to be included first.
-# include <sys/types.h>
 # include <sys/socket.h>
 #else
 # include "safewinsock2.h"
@@ -31,7 +32,6 @@
 
 #ifdef __WIN32__
 # include <type_traits>
-# include "xapian/error.h"
 # if defined SOCK_CLOEXEC
 static_assert(!SOCK_CLOEXEC, "__WIN32__ doesn't support SOCK_CLOEXEC");
 # endif
@@ -39,30 +39,45 @@ static_assert(!SOCK_CLOEXEC, "__WIN32__ doesn't support SOCK_CLOEXEC");
 
 static_assert(std::is_unsigned<SOCKET>::value, "SOCKET is unsigned");
 
-inline int socket_(int domain, int type, int protocol) {
-    // Winsock2's socket() returns the unsigned type SOCKET, which is a 32-bit
-    // type for WIN32 and a 64-bit type for WIN64.
+inline int xapian_convert_socket_to_int_(SOCKET sock) {
+    // Winsock2 function socket() and accept() return the unsigned type SOCKET,
+    // which is a 32-bit type for WIN32 and a 64-bit type for WIN64.
     //
-    // It seems we can always safely assign SOCKET to an int: failure is indicated
-    // by INVALID_SOCKET which will cast to -1 as an int, and it seems in
-    // practice that valid values all fit in 31-bits (and that we're not the
-    // only code to assume this since it makes it much easier to write code
-    // that deals with BSD sockets and winsock2's bastardised version of them)
-    // so Microsoft are unlikely to arbitrarily change that).
+    // It seems we can always safely assign SOCKET to an int and treat the
+    // result like a file descriptor (with < 0 signalling invalid).  Failure is
+    // indicated by INVALID_SOCKET which will cast to -1 as an int, and it
+    // seems in practice that valid values all fit in 31-bits (and that we're
+    // not the only code to assume this since it makes it much easier to write
+    // code that deals with BSD sockets and winsock2's bastardised version of
+    // them) so Microsoft are unlikely to arbitrarily change that).
     //
-    // But we should check and throw an exception rather than quietly mangling
-    // the value.
-    SOCKET sock = socket(domain, type, protocol);
+    // We check this assumption rather than quietly mangling the value.
     if (rare(sock > SOCKET(0x7fffffff) && sock != INVALID_SOCKET)) {
-	throw Xapian::NetworkError("socket() returned value > INT_MAX");
+	closesocket(sock);
+	sock = INVALID_SOCKET;
+	// "Too many open sockets" seems the most appropriate error to fake.
+	WSASetLastError(WSAEMFILE);
     }
     return int(sock);
+}
+
+inline int socket_(int domain, int type, int protocol) {
+    return xapian_convert_socket_to_int_(socket(domain, type, protocol));
 }
 
 # ifdef socket
 #  undef socket
 # endif
 # define socket(D,T,P) socket_(D,T,P)
+
+inline int accept_(int sockfd, struct sockaddr* addr, SOCKLEN_T* addrlen) {
+    return xapian_convert_socket_to_int_(accept(sockfd, addr, addrlen));
+}
+
+# ifdef accept
+#  undef accept
+# endif
+# define accept(S,A,L) accept_(S,A,L)
 
 #elif !defined SOCK_CLOEXEC
 # define SOCK_CLOEXEC 0

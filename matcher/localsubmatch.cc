@@ -37,7 +37,6 @@
 #include "xapian/error.h"
 
 #include "autoptr.h"
-#include <map>
 #include <string>
 
 using namespace std;
@@ -194,7 +193,7 @@ LocalSubMatch::get_postlist(MultiMatch * matcher,
 {
     LOGCALL(MATCH, PostList*, "LocalSubMatch::get_postlist", matcher | total_subqs_ptr | Literal("[total_subqs]"));
 
-    if (query.empty())
+    if (query.empty() || db->get_doccount() == 0)
 	RETURN(new EmptyPostList); // MatchNothing
 
     // Build the postlist tree for the query.  This calls
@@ -271,7 +270,7 @@ LocalSubMatch::open_post_list(const string& term,
 	    !wt_factory->get_sumpart_needs_wdf_()) {
 	    Xapian::doccount sub_tf;
 	    db->get_freqs(term, &sub_tf, NULL);
-	    if (sub_tf == db->get_doccount()) {
+	    if (sub_tf == qopt->db_size) {
 		// If we're not going to use the wdf or term positions, and the
 		// term indexes all documents, we can replace it with the
 		// MatchAll postlist, which is especially efficient if there
@@ -297,21 +296,21 @@ LocalSubMatch::open_post_list(const string& term,
     }
 
     if (lazy_weight) {
-	// Term came from a wildcard, but we may already have that term in the
-	// query anyway, so check before accumulating its TermFreqs.
-	map<string, TermFreqs>::iterator i = stats->termfreqs.find(term);
-	if (i == stats->termfreqs.end()) {
-	    Xapian::doccount sub_tf;
-	    Xapian::termcount sub_cf;
-	    db->get_freqs(term, &sub_tf, &sub_cf);
-	    stats->termfreqs.insert(make_pair(term, TermFreqs(sub_tf, 0, sub_cf)));
+	auto res = stats->termfreqs.emplace(term, TermFreqs());
+	if (res.second) {
+	    // Term came from a wildcard, but the same term may be elsewhere
+	    // in the query so only accumulate its TermFreqs if emplace()
+	    // created a new element.
+	    db->get_freqs(term,
+			  &res.first->second.termfreq,
+			  &res.first->second.collfreq);
 	}
     }
 
     if (weighted) {
 	Xapian::Weight * wt = wt_factory->clone();
 	if (!lazy_weight) {
-	    wt->init_(*stats, qlen, term, wqf, factor);
+	    wt->init_(*stats, qlen, term, wqf, factor, pl);
 	    if (pl->get_termfreq() > 0)
 		stats->set_max_part(term, wt->get_maxpart());
 	} else {

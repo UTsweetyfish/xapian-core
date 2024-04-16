@@ -1,7 +1,7 @@
 /** @file
  * @brief Inspect the contents of a glass table for development or debugging.
  */
-/* Copyright (C) 2007,2008,2009,2010,2011,2012,2017,2018 Olly Betts
+/* Copyright (C) 2007,2008,2009,2010,2011,2012,2017,2018,2023 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,7 +51,7 @@ static void show_usage() {
 "Options:\n"
 "  -t, --table=TABLE  which table to inspect\n"
 "  --help             display this help and exit\n"
-"  --version          output version information and exit" << endl;
+"  --version          output version information and exit\n";
 }
 
 static void
@@ -117,7 +117,7 @@ unescape(const string& s)
 		    char ch2 = *i;
 		    if (!C_isxdigit(ch1) || !C_isxdigit(ch2))
 			goto bad_escaping;
-		    ch = hex_digit(ch1) << 4 | hex_digit(ch2);
+		    ch = hex_decode(ch1, ch2);
 		    break;
 		}
 		default:
@@ -129,8 +129,7 @@ unescape(const string& s)
     return r;
 
 bad_escaping:
-    cout << "Bad escaping in specified key value, assuming literal"
-	 << endl;
+    cout << "Bad escaping in specified key value, assuming literal\n";
     return s;
 }
 
@@ -142,41 +141,47 @@ show_help()
 	    "prev   : Previous entry (alias 'p')\n"
 	    "first  : First entry (alias 'f')\n"
 	    "last   : Last entry (alias 'l')\n"
-	    "goto K : Goto entry with key K (alias 'g')\n"
-	    "until K: Display entries until key K (alias 'u')\n"
+	    "goto K : Goto first entry with key >= K (alias 'g')\n"
+	    "until K: Display entries until key >= K (alias 'u')\n"
 	    "until  : Display entries until end (alias 'u')\n"
+	    "count K: Count entries until key >= K (alias 'c')\n"
+	    "count  : Count entries until end (alias 'c')\n"
 	    "open T : Open table T instead (alias 'o') - e.g. open postlist\n"
 	    "keys   : Toggle showing keys (default: true) (alias 'k')\n"
 	    "tags   : Toggle showing tags (default: true) (alias 't')\n"
 	    "help   : Show this (alias 'h' or '?')\n"
-	    "quit   : Quit this utility (alias 'q')" << endl;
+	    "quit   : Quit this utility (alias 'q')\n";
 }
 
 static void
 show_entry(GlassCursor& cursor)
 {
     if (cursor.after_end()) {
-	cout << "After end" << endl;
+	cout << "After end\n";
+	return;
+    }
+    if (cursor.current_key.empty()) {
+	cout << "Before start\n";
 	return;
     }
     if (keys) {
 	cout << "Key: ";
 	display_nicely(cursor.current_key);
-	cout << endl;
+	cout << '\n';
     }
     if (tags) {
 	cout << "Tag: ";
 	cursor.read_tag();
 	display_nicely(cursor.current_tag);
-	cout << endl;
+	cout << '\n';
     }
 }
 
 static void
-do_until(GlassCursor& cursor, const string& target)
+do_until(GlassCursor& cursor, const string& target, bool show)
 {
     if (cursor.after_end()) {
-	cout << "At end already." << endl;
+	cout << "At end already.\n";
 	return;
     }
 
@@ -184,34 +189,43 @@ do_until(GlassCursor& cursor, const string& target)
 	int cmp = target.compare(cursor.current_key);
 	if (cmp <= 0) {
 	    if (cmp)
-		cout << "Already after specified key." << endl;
+		cout << "Already after specified key.\n";
 	    else
-		cout << "Already at specified key." << endl;
+		cout << "Already at specified key.\n";
 	    return;
 	}
     }
 
     size_t count = 0;
     while (cursor.next()) {
-	int cmp = 1;
-	if (!target.empty()) {
-	    cmp = target.compare(cursor.current_key);
-	    if (cmp < 0) {
-		cout << "No exact match, stopping at entry before, "
-			"having advanced by " << count << " entries." << endl;
-		cursor.find_entry_lt(cursor.current_key);
-		return;
-	    }
-	}
 	++count;
-	show_entry(cursor);
+	if (show) show_entry(cursor);
+
+	if (target.empty())
+	    continue;
+
+	int cmp = target.compare(cursor.current_key);
+	if (cmp < 0) {
+	    cout << "No exact match, stopping at entry after, "
+		    "having advanced by " << count << " entries.\n";
+	    return;
+	}
 	if (cmp == 0) {
-	    cout << "Advanced by " << count << " entries." << endl;
+	    cout << "Advanced by " << count << " entries.\n";
 	    return;
 	}
     }
 
-    cout << "Reached end, having advanced by " << count << " entries." << endl;
+    cout << "Reached end, having advanced by " << count << " entries.\n";
+}
+
+static void
+goto_last(GlassCursor& cursor)
+{
+    // To position on the last key we just do a < search for a key greater than
+    // any possible key - one longer than the longest possible length and
+    // consisting entirely of the highest sorting byte value.
+    cursor.find_entry_lt(string(GLASS_BTREE_MAX_KEY_LEN + 1, '\xff'));
 }
 
 int
@@ -237,7 +251,7 @@ main(int argc, char** argv)
 		show_usage();
 		exit(0);
 	    case OPT_VERSION:
-		cout << PROG_NAME " - " PACKAGE_STRING << endl;
+		cout << PROG_NAME " - " PACKAGE_STRING "\n";
 		exit(0);
 	    default:
 		show_usage();
@@ -255,8 +269,8 @@ main(int argc, char** argv)
     bool arg_is_directory = dir_exists(db_path);
     if (arg_is_directory && table_name.empty()) {
 	cerr << argv[0]
-	     << ": You need to specify a table name to inspect with --table."
-	     << endl;
+	     << ": You need to specify a table name to inspect with "
+		"--table.\n";
 	exit(1);
     }
     int single_file_fd = -1;
@@ -300,7 +314,7 @@ main(int argc, char** argv)
     glass_revision_number_t rev = version_file.get_revision();
 
     show_help();
-    cout << endl;
+    cout << '\n';
 
 open_different_table:
     try {
@@ -318,7 +332,7 @@ open_different_table:
 	} else if (table_name == "postlist") {
 	    table_code = Glass::POSTLIST;
 	} else {
-	    cerr << "Unknown table: '" << table_name << "'" << endl;
+	    cerr << "Unknown table: '" << table_name << "'\n";
 	    exit(1);
 	}
 
@@ -337,13 +351,13 @@ open_different_table:
 
 	table.open(0, version_file.get_root(table_code), rev);
 	if (table.empty()) {
-	    cout << "No entries!" << endl;
+	    cout << "No entries!\n";
 	    exit(0);
 	}
-	cout << "Table has " << table.get_entry_count() << " entries" << endl;
+	cout << "Table has " << table.get_entry_count() << " entries\n";
 
 	GlassCursor cursor(&table);
-	cursor.find_entry(string());
+	cursor.find_entry_ge(string());
 	cursor.next();
 
 	while (!cin.eof()) {
@@ -359,48 +373,58 @@ wait_for_input:
 		input.resize(input.size() - 1);
 
 	    if (input.empty() || input == "n" || input == "next") {
-		if (cursor.after_end() || !cursor.next()) {
-		    cout << "At end already." << endl;
+		if (cursor.after_end()) {
+		    cout << "At end already.\n";
 		    goto wait_for_input;
 		}
+		(void)cursor.next();
 		continue;
 	    } else if (input == "p" || input == "prev") {
-		// If the cursor has fallen off the end, point it back at
-		// the last entry.
-		if (cursor.after_end()) cursor.find_entry(cursor.current_key);
-		cursor.find_entry_lt(cursor.current_key);
 		if (cursor.current_key.empty()) {
-		    cout << "At start already." << endl;
+		    cout << "Before start already.\n";
 		    goto wait_for_input;
 		}
+		// If the cursor has fallen off the end, point it back at the
+		// last entry.
+		if (cursor.after_end()) {
+		    goto_last(cursor);
+		    continue;
+		}
+		cursor.find_entry_lt(cursor.current_key);
 		continue;
 	    } else if (startswith(input, "u ")) {
-		do_until(cursor, unescape(input.substr(2)));
+		do_until(cursor, unescape(input.substr(2)), true);
 		goto wait_for_input;
 	    } else if (startswith(input, "until ")) {
-		do_until(cursor, unescape(input.substr(6)));
+		do_until(cursor, unescape(input.substr(6)), true);
 		goto wait_for_input;
 	    } else if (input == "u" || input == "until") {
-		do_until(cursor, string());
+		do_until(cursor, string(), true);
+		goto wait_for_input;
+	    } else if (startswith(input, "c ")) {
+		do_until(cursor, unescape(input.substr(2)), false);
+		goto wait_for_input;
+	    } else if (startswith(input, "count ")) {
+		do_until(cursor, unescape(input.substr(6)), false);
+		goto wait_for_input;
+	    } else if (input == "c" || input == "count") {
+		do_until(cursor, string(), false);
 		goto wait_for_input;
 	    } else if (input == "f" || input == "first") {
-		cursor.find_entry(string());
+		cursor.find_entry_ge(string());
 		cursor.next();
 		continue;
 	    } else if (input == "l" || input == "last") {
-		// To position on the last key we just search for a key with
-		// the longest possible length consisting entirely of the
-		// highest sorting byte value.
-		cursor.find_entry(string(GLASS_BTREE_MAX_KEY_LEN, '\xff'));
+		goto_last(cursor);
 		continue;
 	    } else if (startswith(input, "g ")) {
-		if (!cursor.find_entry(unescape(input.substr(2)))) {
-		    cout << "No exact match, going to entry before." << endl;
+		if (!cursor.find_entry_ge(unescape(input.substr(2)))) {
+		    cout << "No exact match, going to entry after.\n";
 		}
 		continue;
 	    } else if (startswith(input, "goto ")) {
-		if (!cursor.find_entry(unescape(input.substr(5)))) {
-		    cout << "No exact match, going to entry before." << endl;
+		if (!cursor.find_entry_ge(unescape(input.substr(5)))) {
+		    cout << "No exact match, going to entry after.\n";
 		}
 		continue;
 	    } else if (startswith(input, "o ") || startswith(input, "open ")) {
@@ -414,22 +438,22 @@ wait_for_input:
 		goto open_different_table;
 	    } else if (input == "t" || input == "tags") {
 		tags = !tags;
-		cout << "Showing tags: " << boolalpha << tags << endl;
+		cout << "Showing tags: " << boolalpha << tags << '\n';
 	    } else if (input == "k" || input == "keys") {
 		keys = !keys;
-		cout << "Showing keys: " << boolalpha << keys << endl;
+		cout << "Showing keys: " << boolalpha << keys << '\n';
 	    } else if (input == "q" || input == "quit") {
 		break;
 	    } else if (input == "h" || input == "help" || input == "?") {
 		show_help();
 		goto wait_for_input;
 	    } else {
-		cout << "Unknown command." << endl;
+		cout << "Unknown command.\n";
 		goto wait_for_input;
 	    }
 	}
     } catch (const Xapian::Error& error) {
-	cerr << argv[0] << ": " << error.get_description() << endl;
+	cerr << argv[0] << ": " << error.get_description() << '\n';
 	exit(1);
     }
 }

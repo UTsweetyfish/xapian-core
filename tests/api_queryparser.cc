@@ -32,7 +32,6 @@
 #include "str.h"
 #include "stringutils.h"
 
-#include <cmath>
 #include <string>
 #include <vector>
 
@@ -692,18 +691,16 @@ static const test test_or_queries[] = {
     { "Xapian site:xapian.org site:www.xapian.org", "(xapian@1 FILTER (Hxapian.org OR Hwww.xapian.org))" },
     { "author:richard author:olly writer:charlie", "(ZArichard@1 OR ZAolli@2 OR ZAcharli@3)"},
     { "author:richard NEAR title:book", "(Arichard@1 NEAR 11 XTbook@2)"},
-// FIXME: This throws an exception as of 1.3.6, but once implemented we
-// should re-enable it.
-//    { "authortitle:richard NEAR title:book", "((Arichard@1 OR XTrichard@1) NEAR 11 XTbook@2)" },
+    { "authortitle:richard NEAR title:book", "((Arichard@1 OR XTrichard@1) NEAR 11 XTbook@2)" },
     { "multisite:xapian.org", "0 * (Hxapian.org OR Jxapian.org)"},
     { "authortitle:richard", "(ZArichard@1 OR ZXTrichard@1)"},
     { "multisite:xapian.org site:www.xapian.org author:richard authortitle:richard", "((ZArichard@1 OR (ZArichard@2 OR ZXTrichard@2)) FILTER ((Hxapian.org OR Jxapian.org) AND Hwww.xapian.org))" },
     { "authortitle:richard-boulton", "((Arichard@1 PHRASE 2 Aboulton@2) OR (XTrichard@1 PHRASE 2 XTboulton@2))"},
     { "authortitle:\"richard boulton\"", "((Arichard@1 PHRASE 2 Aboulton@2) OR (XTrichard@1 PHRASE 2 XTboulton@2))"},
-    // Test FLAG_CJK_NGRAM isn't on by default:
+    // Test FLAG_NGRAMS isn't on by default:
     { "久有归天愿", "Z久有归天愿@1" },
-    { NULL, "CJK" }, // Enable FLAG_CJK_NGRAM
-    // Test non-CJK queries still parse the same:
+    { NULL, "NGRAMS" }, // Enable FLAG_NGRAMS
+    // Test queries which don't need word break finding still parse the same:
     { "gtk+ -gnome", "(Zgtk+@1 AND_NOT Zgnome@2)" },
     { "“curly quotes”", "(curly@1 PHRASE 2 quotes@2)" },
     // Test n-gram generation:
@@ -719,6 +716,13 @@ static const test test_or_queries[] = {
     { "\"久有归\"", "(久@1 PHRASE 3 有@1 PHRASE 3 归@1)" },
     { "\"久有test归\"", "(久@1 PHRASE 4 有@1 PHRASE 4 test@2 PHRASE 4 归@3)" },
     // FIXME: this should work: { "久 NEAR 有", "(久@1 NEAR 11 有@2)" },
+
+    // Regression tests that UNBROKEN_WORDS ends a term group:
+    { "x 我y",  "(Zx@1 OR 我@2 OR Zy@3)" },
+    { "x 我 y", "(Zx@1 OR 我@2 OR Zy@3)" },
+    { "w x 我y",  "(Zw@1 OR Zx@2 OR 我@3 OR Zy@4)" },
+    { "w x 我 y", "(Zw@1 OR Zx@2 OR 我@3 OR Zy@4)" },
+
     { NULL, NULL }
 };
 
@@ -748,8 +752,8 @@ DEFINE_TESTCASE(queryparser1, !backend) {
     for (const test *p = test_or_queries; ; ++p) {
 	if (!p->query) {
 	    if (!p->expect) break;
-	    if (strcmp(p->expect, "CJK") == 0) {
-		flags = queryparser.FLAG_DEFAULT|queryparser.FLAG_CJK_NGRAM;
+	    if (strcmp(p->expect, "NGRAMS") == 0) {
+		flags = queryparser.FLAG_DEFAULT|queryparser.FLAG_NGRAMS;
 		continue;
 	    }
 	    FAIL_TEST("Unknown flag code: " << p->expect);
@@ -797,7 +801,7 @@ static const test test_and_queries[] = {
     // Add coverage for other cases similar to the above.
     { "a b site:xapian.org", "((Za@1 AND Zb@2) FILTER Hxapian.org)" },
     { "site:xapian.org a b", "((Za@1 AND Zb@2) FILTER Hxapian.org)" },
-    { NULL, "CJK" }, // Enable FLAG_CJK_NGRAM
+    { NULL, "NGRAMS" }, // Enable FLAG_NGRAMS
     // Test n-gram generation:
     { "author:험가 OR subject:万众 hello world!", "((A험@1 AND A험가@1 AND A가@1) OR (XT万@2 AND XT万众@2 AND XT众@2 AND (Zhello@3 AND Zworld@4)))" },
     { "洛伊one儿差点two脸three", "(洛@1 AND 洛伊@1 AND 伊@1 AND Zone@2 AND (儿@3 AND 儿差@3 AND 差@3 AND 差点@3 AND 点@3) AND Ztwo@4 AND 脸@5 AND Zthree@6)" },
@@ -818,8 +822,8 @@ DEFINE_TESTCASE(qp_default_op1, !backend) {
     for (const test *p = test_and_queries; ; ++p) {
 	if (!p->query) {
 	    if (!p->expect) break;
-	    if (strcmp(p->expect, "CJK") == 0) {
-		flags = queryparser.FLAG_DEFAULT|queryparser.FLAG_CJK_NGRAM;
+	    if (strcmp(p->expect, "NGRAMS") == 0) {
+		flags = queryparser.FLAG_DEFAULT|queryparser.FLAG_NGRAMS;
 		continue;
 	    }
 	    FAIL_TEST("Unknown flag code: " << p->expect);
@@ -859,7 +863,7 @@ DEFINE_TESTCASE(qp_default_prefix1, !backend) {
     TEST_STRINGS_EQUAL(qobj.get_description(), "Query((ZAme@1 OR ZXTstuff@2))");
     qobj = qp.parse_query("title:(stuff) me", Xapian::QueryParser::FLAG_BOOLEAN, "A");
     TEST_STRINGS_EQUAL(qobj.get_description(), "Query((ZXTstuff@1 OR ZAme@2))");
-    qobj = qp.parse_query("英国 title:文森hello", qp.FLAG_CJK_NGRAM, "A");
+    qobj = qp.parse_query("英国 title:文森hello", qp.FLAG_NGRAMS, "A");
     TEST_STRINGS_EQUAL(qobj.get_description(), "Query(((A英@1 AND A英国@1 AND A国@1) OR (XT文@2 AND XT文森@2 AND XT森@2) OR ZAhello@3))");
 }
 
@@ -913,17 +917,20 @@ DEFINE_TESTCASE(qp_odd_chars1, !backend) {
 }
 
 // Test right truncation.
-DEFINE_TESTCASE(qp_flag_wildcard1, writable) {
-    Xapian::WritableDatabase db = get_writable_database();
-    Xapian::Document doc;
-    doc.add_term("abc");
-    doc.add_term("main");
-    doc.add_term("muscat");
-    doc.add_term("muscle");
-    doc.add_term("musclebound");
-    doc.add_term("muscular");
-    doc.add_term("mutton");
-    db.add_document(doc);
+DEFINE_TESTCASE(qp_flag_wildcard1, backend) {
+    Xapian::Database db = get_database("qp_flag_wildcard1",
+				       [](Xapian::WritableDatabase& wdb,
+					  const string&) {
+					   Xapian::Document doc;
+					   doc.add_term("abc");
+					   doc.add_term("main");
+					   doc.add_term("muscat");
+					   doc.add_term("muscle");
+					   doc.add_term("musclebound");
+					   doc.add_term("muscular");
+					   doc.add_term("mutton");
+					   wdb.add_document(doc);
+				       });
     Xapian::QueryParser qp;
     qp.set_database(db);
     Xapian::Query qobj = qp.parse_query("ab*", Xapian::QueryParser::FLAG_WILDCARD);
@@ -1011,13 +1018,16 @@ DEFINE_TESTCASE(qp_flag_wildcard1, writable) {
 }
 
 // Test right truncation with prefixes.
-DEFINE_TESTCASE(qp_flag_wildcard2, writable) {
-    Xapian::WritableDatabase db = get_writable_database();
-    Xapian::Document doc;
-    doc.add_term("Aheinlein");
-    doc.add_term("Ahuxley");
-    doc.add_term("hello");
-    db.add_document(doc);
+DEFINE_TESTCASE(qp_flag_wildcard2, backend) {
+    Xapian::Database db = get_database("qp_flag_wildcard2",
+				       [](Xapian::WritableDatabase& wdb,
+					  const string&) {
+					   Xapian::Document doc;
+					   doc.add_term("Aheinlein");
+					   doc.add_term("Ahuxley");
+					   doc.add_term("hello");
+					   wdb.add_document(doc);
+				       });
     Xapian::QueryParser qp;
     qp.set_database(db);
     qp.add_prefix("author", "A");
@@ -1044,17 +1054,20 @@ test_qp_flag_wildcard3_helper(const Xapian::Database &db,
 }
 
 // Test right truncation with a limit on expansion.
-DEFINE_TESTCASE(qp_flag_wildcard3, writable) {
-    Xapian::WritableDatabase db = get_writable_database();
-    Xapian::Document doc;
-    doc.add_term("abc");
-    doc.add_term("main");
-    doc.add_term("muscat");
-    doc.add_term("muscle");
-    doc.add_term("musclebound");
-    doc.add_term("muscular");
-    doc.add_term("mutton");
-    db.add_document(doc);
+DEFINE_TESTCASE(qp_flag_wildcard3, backend) {
+    Xapian::Database db = get_database("qp_flag_wildcard3",
+				       [](Xapian::WritableDatabase& wdb,
+					  const string&) {
+					   Xapian::Document doc;
+					   doc.add_term("abc");
+					   doc.add_term("main");
+					   doc.add_term("muscat");
+					   doc.add_term("muscle");
+					   doc.add_term("musclebound");
+					   doc.add_term("muscular");
+					   doc.add_term("mutton");
+					   wdb.add_document(doc);
+				       });
 
     // Test that a max of 0 doesn't set a limit.
     test_qp_flag_wildcard3_helper(db, 0, "z*");
@@ -1082,9 +1095,10 @@ DEFINE_TESTCASE(qp_flag_wildcard3, writable) {
 	test_qp_flag_wildcard3_helper(db, 5, "m*"));
 }
 
-// Test partial queries.
-DEFINE_TESTCASE(qp_flag_partial1, writable) {
-    Xapian::WritableDatabase db = get_writable_database();
+static void
+gen_qp_flag_partial1_db(Xapian::WritableDatabase& db,
+			const string&)
+{
     Xapian::Document doc;
     Xapian::Stem stemmer("english");
     doc.add_term("abc");
@@ -1108,6 +1122,13 @@ DEFINE_TESTCASE(qp_flag_partial1, writable) {
     doc.add_term("XTWOpartial3");
     doc.add_term("XTWOpartial4");
     db.add_document(doc);
+}
+
+// Test partial queries.
+DEFINE_TESTCASE(qp_flag_partial1, backend) {
+    Xapian::Database db = get_database("qp_flag_partial1",
+				       gen_qp_flag_partial1_db);
+    Xapian::Stem stemmer("english");
     Xapian::QueryParser qp;
     qp.set_database(db);
     qp.set_stemmer(stemmer);
@@ -1232,21 +1253,21 @@ DEFINE_TESTCASE(wildquery1, backend) {
     Xapian::Enquire enquire(db);
 
     Xapian::Query qobj = queryparser.parse_query("th*", flags);
-    tout << qobj.get_description() << endl;
+    tout << qobj.get_description() << '\n';
     enquire.set_query(qobj);
     Xapian::MSet mymset = enquire.get_mset(0, 10);
     // Check that 6 documents were returned.
     TEST_MSET_SIZE(mymset, 6);
 
     qobj = queryparser.parse_query("notindb* \"this\"", flags);
-    tout << qobj.get_description() << endl;
+    tout << qobj.get_description() << '\n';
     enquire.set_query(qobj);
     mymset = enquire.get_mset(0, 10);
     // Check that 6 documents were returned.
     TEST_MSET_SIZE(mymset, 6);
 
     qobj = queryparser.parse_query("+notindb* \"this\"", flags);
-    tout << qobj.get_description() << endl;
+    tout << qobj.get_description() << '\n';
     enquire.set_query(qobj);
     mymset = enquire.get_mset(0, 10);
     // Check that 0 documents were returned.
@@ -1661,9 +1682,9 @@ DEFINE_TESTCASE(qp_range2, !backend) {
     }
 }
 
-// Test NumberValueRangeProcessors with actual data.
-DEFINE_TESTCASE(qp_value_range3, writable) {
-    Xapian::WritableDatabase db = get_writable_database();
+static void
+gen_qp_range3_db(Xapian::WritableDatabase& db, const string&)
+{
     double low = -10;
     int steps = 60;
     double step = 0.5;
@@ -1674,6 +1695,15 @@ DEFINE_TESTCASE(qp_value_range3, writable) {
 	doc.add_value(1, Xapian::sortable_serialise(v));
 	db.add_document(doc);
     }
+}
+
+// Test NumberValueRangeProcessors with actual data.
+DEFINE_TESTCASE(qp_value_range3, backend) {
+    double low = -10;
+    int steps = 60;
+    double step = 0.5;
+
+    Xapian::Database db = get_database("qp_range3", gen_qp_range3_db);
 
     Xapian::NumberValueRangeProcessor vrp_num(1);
     Xapian::QueryParser qp;
@@ -1704,18 +1734,12 @@ DEFINE_TESTCASE(qp_value_range3, writable) {
 }
 
 // Test NumberRangeProcessors with actual data.
-DEFINE_TESTCASE(qp_range3, writable) {
-    Xapian::WritableDatabase db = get_writable_database();
+DEFINE_TESTCASE(qp_range3, backend) {
     double low = -10;
     int steps = 60;
     double step = 0.5;
 
-    for (int i = 0; i <= steps; ++i) {
-	double v = low + i * step;
-	Xapian::Document doc;
-	doc.add_value(1, Xapian::sortable_serialise(v));
-	db.add_document(doc);
-    }
+    Xapian::Database db = get_database("qp_range3", gen_qp_range3_db);
 
     Xapian::NumberRangeProcessor rp_num(1);
     Xapian::QueryParser qp;
@@ -2307,20 +2331,22 @@ static const test test_mispelled_queries[] = {
 
 // Test spelling correction in the QueryParser.
 DEFINE_TESTCASE(qp_spell1, spelling) {
-    Xapian::WritableDatabase db = get_writable_database();
+    Xapian::Database db = get_database("qp_spell1",
+				       [](Xapian::WritableDatabase& wdb,
+					  const string&) {
+					   Xapian::Document doc;
+					   doc.add_term("document", 6);
+					   doc.add_term("search", 7);
+					   doc.add_term("saerch", 1);
+					   doc.add_term("paragraph", 8);
+					   doc.add_term("paragraf", 2);
+					   wdb.add_document(doc);
 
-    Xapian::Document doc;
-    doc.add_term("document", 6);
-    doc.add_term("search", 7);
-    doc.add_term("saerch", 1);
-    doc.add_term("paragraph", 8);
-    doc.add_term("paragraf", 2);
-    db.add_document(doc);
-
-    db.add_spelling("document");
-    db.add_spelling("search");
-    db.add_spelling("paragraph");
-    db.add_spelling("band");
+					   wdb.add_spelling("document");
+					   wdb.add_spelling("search");
+					   wdb.add_spelling("paragraph");
+					   wdb.add_spelling("band");
+				       });
 
     Xapian::QueryParser qp;
     qp.set_stemming_strategy(Xapian::QueryParser::STEM_SOME);
@@ -2331,7 +2357,7 @@ DEFINE_TESTCASE(qp_spell1, spelling) {
 	q = qp.parse_query(p->query,
 			   Xapian::QueryParser::FLAG_SPELLING_CORRECTION |
 			   Xapian::QueryParser::FLAG_BOOLEAN);
-	tout << "Query: " << p->query << endl;
+	tout << "Query: " << p->query << '\n';
 	TEST_STRINGS_EQUAL(qp.get_corrected_query_string(), p->expect);
     }
 }
@@ -2339,18 +2365,18 @@ DEFINE_TESTCASE(qp_spell1, spelling) {
 // Test spelling correction in the QueryParser with multiple databases.
 DEFINE_TESTCASE(qp_spell2, spelling)
 {
-    Xapian::WritableDatabase db1 = get_writable_database();
-
-    db1.add_spelling("document");
-    db1.add_spelling("search");
-    db1.commit();
-
-    Xapian::WritableDatabase db2 = get_named_writable_database("qp_spell2a");
-
-    db2.add_spelling("document");
-    db2.add_spelling("paragraph");
-    db2.add_spelling("band");
-
+    Xapian::Database db1 = get_database("qp_spell2a",
+					[](Xapian::WritableDatabase& wdb,
+					   const string&) {
+					    wdb.add_spelling("document");
+					    wdb.add_spelling("search");
+					});
+    Xapian::Database db2 = get_database("qp_spell2b",
+					[](Xapian::WritableDatabase& wdb,
+					   const string&) {
+					    wdb.add_spelling("document");
+					    wdb.add_spelling("paragraph");
+					});
     Xapian::Database db;
     db.add_database(db1);
     db.add_database(db2);
@@ -2364,9 +2390,18 @@ DEFINE_TESTCASE(qp_spell2, spelling)
 	q = qp.parse_query(p->query,
 			   Xapian::QueryParser::FLAG_SPELLING_CORRECTION |
 			   Xapian::QueryParser::FLAG_BOOLEAN);
-	tout << "Query: " << p->query << endl;
+	tout << "Query: " << p->query << '\n';
 	TEST_STRINGS_EQUAL(qp.get_corrected_query_string(), p->expect);
     }
+}
+
+static void
+gen_simple_spelling_db(Xapian::WritableDatabase& db, const string&)
+{
+    db.add_spelling("document");
+    db.add_spelling("search");
+    db.add_spelling("paragraph");
+    db.add_spelling("band");
 }
 
 static const test test_mispelled_wildcard_queries[] = {
@@ -2380,13 +2415,8 @@ static const test test_mispelled_wildcard_queries[] = {
 // Test spelling correction in the QueryParser with wildcards.
 // Regression test for bug fixed in 1.1.3 and 1.0.17.
 DEFINE_TESTCASE(qp_spellwild1, spelling) {
-    Xapian::WritableDatabase db = get_writable_database();
-
-    db.add_spelling("document");
-    db.add_spelling("search");
-    db.add_spelling("paragraph");
-    db.add_spelling("band");
-
+    Xapian::Database db = get_database("simple_spelling_db",
+				       gen_simple_spelling_db);
     Xapian::QueryParser qp;
     qp.set_database(db);
 
@@ -2397,7 +2427,7 @@ DEFINE_TESTCASE(qp_spellwild1, spelling) {
 			   Xapian::QueryParser::FLAG_SPELLING_CORRECTION |
 			   Xapian::QueryParser::FLAG_BOOLEAN |
 			   Xapian::QueryParser::FLAG_WILDCARD);
-	tout << "Query: " << p->query << endl;
+	tout << "Query: " << p->query << '\n';
 	TEST_STRINGS_EQUAL(qp.get_corrected_query_string(), p->expect);
     }
     for (p = test_mispelled_wildcard_queries; p->query; ++p) {
@@ -2406,7 +2436,7 @@ DEFINE_TESTCASE(qp_spellwild1, spelling) {
 			   Xapian::QueryParser::FLAG_SPELLING_CORRECTION |
 			   Xapian::QueryParser::FLAG_BOOLEAN |
 			   Xapian::QueryParser::FLAG_WILDCARD);
-	tout << "Query: " << p->query << endl;
+	tout << "Query: " << p->query << '\n';
 	TEST_STRINGS_EQUAL(qp.get_corrected_query_string(), p->expect);
     }
 }
@@ -2424,13 +2454,8 @@ static const test test_mispelled_partial_queries[] = {
 // Test spelling correction in the QueryParser with FLAG_PARTIAL.
 // Regression test for bug fixed in 1.1.3 and 1.0.17.
 DEFINE_TESTCASE(qp_spellpartial1, spelling) {
-    Xapian::WritableDatabase db = get_writable_database();
-
-    db.add_spelling("document");
-    db.add_spelling("search");
-    db.add_spelling("paragraph");
-    db.add_spelling("band");
-
+    Xapian::Database db = get_database("simple_spelling_db",
+				       gen_simple_spelling_db);
     Xapian::QueryParser qp;
     qp.set_database(db);
 
@@ -2439,7 +2464,7 @@ DEFINE_TESTCASE(qp_spellpartial1, spelling) {
 	q = qp.parse_query(p->query,
 			   Xapian::QueryParser::FLAG_SPELLING_CORRECTION |
 			   Xapian::QueryParser::FLAG_PARTIAL);
-	tout << "Query: " << p->query << endl;
+	tout << "Query: " << p->query << '\n';
 	TEST_STRINGS_EQUAL(qp.get_corrected_query_string(), p->expect);
     }
 }
@@ -2465,16 +2490,18 @@ static const test test_synonym_queries[] = {
 };
 
 // Test single term synonyms in the QueryParser.
-DEFINE_TESTCASE(qp_synonym1, spelling) {
-    Xapian::WritableDatabase db = get_writable_database();
-
-    db.add_synonym("Zsearch", "Zfind");
-    db.add_synonym("Zsearch", "Zlocate");
-    db.add_synonym("search", "find");
-    db.add_synonym("Zseek", "Zsearch");
-    db.add_synonym("regression test", "magic");
-
-    db.commit();
+DEFINE_TESTCASE(qp_synonym1, synonyms) {
+    Xapian::Database db = get_database("qp_synonym1",
+				       [](Xapian::WritableDatabase& wdb,
+					  const string&) {
+					   wdb.add_synonym("Zsearch", "Zfind");
+					   wdb.add_synonym("Zsearch",
+							   "Zlocate");
+					   wdb.add_synonym("search", "find");
+					   wdb.add_synonym("Zseek", "Zsearch");
+					   wdb.add_synonym("regression test",
+							   "magic");
+				       });
 
     Xapian::QueryParser qp;
     qp.set_stemmer(Xapian::Stem("english"));
@@ -2487,7 +2514,7 @@ DEFINE_TESTCASE(qp_synonym1, spelling) {
 	expect += ')';
 	Xapian::Query q;
 	q = qp.parse_query(p->query, qp.FLAG_AUTO_SYNONYMS|qp.FLAG_DEFAULT);
-	tout << "Query: " << p->query << endl;
+	tout << "Query: " << p->query << '\n';
 	TEST_STRINGS_EQUAL(q.get_description(), expect);
     }
 }
@@ -2504,13 +2531,14 @@ static const test test_multi_synonym_queries[] = {
 
 // Test multi term synonyms in the QueryParser.
 DEFINE_TESTCASE(qp_synonym2, synonyms) {
-    Xapian::WritableDatabase db = get_writable_database();
-
-    db.add_synonym("sun tan cream", "lotion");
-    db.add_synonym("sun tan", "bathe");
-    db.add_synonym("single", "record");
-
-    db.commit();
+    Xapian::Database db = get_database("qp_synonym2",
+				       [](Xapian::WritableDatabase& wdb,
+					  const string&) {
+					   wdb.add_synonym("sun tan cream",
+							   "lotion");
+					   wdb.add_synonym("sun tan", "bathe");
+					   wdb.add_synonym("single", "record");
+				       });
 
     Xapian::QueryParser qp;
     qp.set_stemmer(Xapian::Stem("english"));
@@ -2525,7 +2553,7 @@ DEFINE_TESTCASE(qp_synonym2, synonyms) {
 	q = qp.parse_query(p->query,
 			   Xapian::QueryParser::FLAG_AUTO_MULTIWORD_SYNONYMS |
 			   Xapian::QueryParser::FLAG_DEFAULT);
-	tout << "Query: " << p->query << endl;
+	tout << "Query: " << p->query << '\n';
 	TEST_STRINGS_EQUAL(q.get_description(), expect);
     }
 }
@@ -2551,15 +2579,17 @@ static const test test_synonym_op_queries[] = {
 
 // Test the synonym operator in the QueryParser.
 DEFINE_TESTCASE(qp_synonym3, synonyms) {
-    Xapian::WritableDatabase db = get_writable_database();
-
-    db.add_synonym("Zsearch", "Zfind");
-    db.add_synonym("Zsearch", "Zlocate");
-    db.add_synonym("search", "find");
-    db.add_synonym("Zseek", "Zsearch");
-    db.add_synonym("ZXFOOsearch", "prefixated");
-
-    db.commit();
+    Xapian::Database db = get_database("qp_synonym3",
+				       [](Xapian::WritableDatabase& wdb,
+					  const string&) {
+					   wdb.add_synonym("Zsearch", "Zfind");
+					   wdb.add_synonym("Zsearch",
+							   "Zlocate");
+					   wdb.add_synonym("search", "find");
+					   wdb.add_synonym("Zseek", "Zsearch");
+					   wdb.add_synonym("ZXFOOsearch",
+							   "prefixated");
+				       });
 
     Xapian::QueryParser qp;
     qp.set_stemmer(Xapian::Stem("english"));
@@ -2577,7 +2607,7 @@ DEFINE_TESTCASE(qp_synonym3, synonyms) {
 			   Xapian::QueryParser::FLAG_BOOLEAN |
 			   Xapian::QueryParser::FLAG_LOVEHATE |
 			   Xapian::QueryParser::FLAG_PHRASE);
-	tout << "Query: " << p->query << endl;
+	tout << "Query: " << p->query << '\n';
 	TEST_STRINGS_EQUAL(q.get_description(), expect);
     }
 }
@@ -2706,7 +2736,7 @@ qp_scale1_helper(const Xapian::Database &db, const string & q, unsigned n,
 
 // Regression test: check that query parser doesn't scale very badly with the
 // size of the query.
-DEFINE_TESTCASE(qp_scale1, synonyms) {
+DEFINE_TESTCASE(qp_scale1, writable && synonyms) {
     Xapian::WritableDatabase db = get_writable_database();
 
     db.add_synonym("foo", "bar");
@@ -2916,14 +2946,17 @@ static const test test_stopword_group_and_queries[] = {
 };
 
 // Regression test for bug fixed in 1.0.17 and 1.1.3.
-DEFINE_TESTCASE(qp_stopword_group1, writable) {
-    Xapian::WritableDatabase db = get_writable_database();
-    Xapian::Document doc;
-    doc.add_term("test");
-    doc.add_term("tester");
-    doc.add_term("testable");
-    doc.add_term("user");
-    db.add_document(doc);
+DEFINE_TESTCASE(qp_stopword_group1, backend) {
+    Xapian::Database db = get_database("qp_stopword_group1",
+				       [](Xapian::WritableDatabase& wdb,
+					  const string&) {
+					   Xapian::Document doc;
+					   doc.add_term("test");
+					   doc.add_term("tester");
+					   doc.add_term("testable");
+					   doc.add_term("user");
+					   wdb.add_document(doc);
+				       });
 
     Xapian::SimpleStopper stopper;
     stopper.add("this");
@@ -2978,7 +3011,7 @@ DEFINE_TESTCASE(qp_default_op2, !backend) {
 	Xapian::Query::OP_VALUE_LE
     };
     for (Xapian::Query::op op : ops) {
-	tout << op << endl;
+	tout << op << '\n';
 	TEST_EXCEPTION(Xapian::InvalidArgumentError,
 		       qp.set_default_op(op));
 	TEST_EQUAL(qp.get_default_op(), Xapian::Query::OP_OR);
@@ -3009,7 +3042,7 @@ DEFINE_TESTCASE(qp_default_op3, !backend) {
     };
     const qp_default_op3_test * p;
     for (p = tests; p - tests != sizeof(tests) / sizeof(*tests); ++p) {
-	tout << p->op << endl;
+	tout << p->op << '\n';
 	qp.set_default_op(p->op);
 	// Check that get_default_op() returns what we just set.
 	TEST_EQUAL(qp.get_default_op(), p->op);
@@ -3031,4 +3064,36 @@ DEFINE_TESTCASE(qp_stemsomefullpos, !backend) {
     qp.set_stemming_strategy(qp.STEM_SOME_FULL_POS);
     TEST_EQUAL(qp.parse_query("terms NEAR testing").get_description(), "Query((Zterm@1 NEAR 11 Ztest@2))");
     TEST_EQUAL(qp.parse_query("terms ADJ testing").get_description(), "Query((Zterm@1 PHRASE 11 Ztest@2))");
+}
+
+DEFINE_TESTCASE(qp_nopos, !backend) {
+    static const test tests[] = {
+	{ "no pos anyway", "(no@1 OR pos@2 OR anyway@3)" },
+	{ "w ADJ x", "(w@1 AND x@2)" },
+	{ "\"phrase q\" OR A NEAR/4 B", "((phrase@1 AND q@2) OR (a@3 AND b@4))" },
+	// Check FLAG_NO_POSITIONS stays on if we reparse with fewer flags.
+	{ "a-b NEAR x", "((a@1 AND b@2) OR (near@3 OR x@4))" },
+    };
+    Xapian::QueryParser qp;
+    const auto flags = qp.FLAG_DEFAULT | qp.FLAG_NO_POSITIONS;
+    for (const test& p : tests) {
+	string expect, parsed;
+	if (p.expect)
+	    expect = p.expect;
+	else
+	    expect = "parse error";
+	try {
+	    Xapian::Query q = qp.parse_query(p.query, flags);
+	    parsed = q.get_description();
+	    expect = string("Query(") + expect + ')';
+	} catch (const Xapian::QueryParserError& e) {
+	    parsed = e.get_msg();
+	} catch (const Xapian::Error& e) {
+	    parsed = e.get_description();
+	} catch (...) {
+	    parsed = "Unknown exception!";
+	}
+	tout << "Query: " << p.query << '\n';
+	TEST_STRINGS_EQUAL(parsed, expect);
+    }
 }

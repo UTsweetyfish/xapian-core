@@ -30,8 +30,6 @@
 #include "xapian/enquire.h"
 #include "xapian/weight.h"
 
-#include <map>
-
 class LeafPostList;
 
 class LocalSubMatch : public SubMatch {
@@ -44,7 +42,7 @@ class LocalSubMatch : public SubMatch {
     /// The statistics for the collection.
     Xapian::Weight::Internal * stats;
 
-    /// The original query before any rearrangement.
+    /// The query.
     Xapian::Query query;
 
     /// The query length (used by some weighting schemes).

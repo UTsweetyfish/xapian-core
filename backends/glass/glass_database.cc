@@ -619,16 +619,13 @@ GlassDatabase::modifications_failed(glass_revision_number_t new_revision,
 	cancel();
 
 	// Reopen tables with old revision number.
-	version_file.cancel();
+	version_file.read();
 	docdata_table.open(flags, version_file.get_root(Glass::DOCDATA), old_revision);
 	spelling_table.open(flags, version_file.get_root(Glass::SPELLING), old_revision);
 	synonym_table.open(flags, version_file.get_root(Glass::SYNONYM), old_revision);
 	termlist_table.open(flags, version_file.get_root(Glass::TERMLIST), old_revision);
 	position_table.open(flags, version_file.get_root(Glass::POSITION), old_revision);
 	postlist_table.open(flags, version_file.get_root(Glass::POSTLIST), old_revision);
-
-	Xapian::termcount ub = version_file.get_spelling_wordfreq_upper_bound();
-	spelling_table.set_wordfreq_upper_bound(ub);
 
 	value_manager.reset();
 
@@ -900,7 +897,7 @@ GlassDatabase::open_position_list(Xapian::docid did, const string & term) const
 TermList *
 GlassDatabase::open_allterms(const string & prefix) const
 {
-    LOGCALL(DB, TermList *, "GlassDatabase::open_allterms", NO_ARGS);
+    LOGCALL(DB, TermList*, "GlassDatabase::open_allterms", prefix);
     RETURN(new GlassAllTermsList(intrusive_ptr<const GlassDatabase>(this),
 				 prefix));
 }
@@ -955,7 +952,7 @@ GlassDatabase::get_metadata(const string & key) const
 TermList *
 GlassDatabase::open_metadata_keylist(const std::string &prefix) const
 {
-    LOGCALL(DB, TermList *, "GlassDatabase::open_metadata_keylist", NO_ARGS);
+    LOGCALL(DB, TermList*, "GlassDatabase::open_metadata_keylist", prefix);
     GlassCursor * cursor = postlist_table.cursor_get();
     if (!cursor) RETURN(NULL);
     RETURN(new GlassMetadataTermList(intrusive_ptr<const GlassDatabase>(this),
@@ -1567,7 +1564,7 @@ GlassWritableDatabase::open_position_list(Xapian::docid did, const string & term
 TermList *
 GlassWritableDatabase::open_allterms(const string & prefix) const
 {
-    LOGCALL(DB, TermList *, "GlassWritableDatabase::open_allterms", NO_ARGS);
+    LOGCALL(DB, TermList*, "GlassWritableDatabase::open_allterms", prefix);
     if (change_count) {
 	// There are changes, and terms may have been added or removed, and so
 	// we need to flush changes for terms with the specified prefix (but

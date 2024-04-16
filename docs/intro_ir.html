@@ -1,20 +1,20 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.16: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.20.1: https://docutils.sourceforge.io/" />
 <title>Theoretical Background</title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7952 2016-07-26 18:15:59Z milde $
+:Id: $Id: html4css1.css 8954 2022-01-20 10:10:25Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
 
-See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+See https://docutils.sourceforge.io/docs/howto/html-stylesheets.html for how to
 customize this style sheet.
 */
 
@@ -385,11 +385,11 @@ that occur in the tunes.</p>
 <p>If, in an IR system, a document, D, is described by a term, t, t is said
 to <em>index</em> D, and we can write,</p>
 <blockquote>
-<span class="formula"><i>t</i> → <i>D</i></span></blockquote>
+<span class="formula"><i>t</i> → <i>D</i></span></blockquote>
 <p>In fact an IR system consists of a set of documents, <span class="formula"><i>D</i><sub>1</sub></span>, <span class="formula"><i>D</i><sub>2</sub></span>, <span class="formula"><i>D</i><sub>3</sub></span> ...,
 a set of terms <span class="formula"><i>t</i><sub>1</sub></span>, <span class="formula"><i>t</i><sub>2</sub></span>, <span class="formula"><i>t</i><sub>3</sub></span> ..., and set of relationships,</p>
 <blockquote>
-<span class="formula"><i>t</i><sub><i>i</i></sub> → <i>D</i><sub><i>j</i></sub></span></blockquote>
+<span class="formula"><i>t</i><sub><i>i</i></sub> → <i>D</i><sub><i>j</i></sub></span></blockquote>
 <p>i.e. instances of terms indexing documents. A single instance of a
 particular term indexing a particular document is called a <em>posting</em>.</p>
 <p>For a document, D, there is a list of terms which index it. This is
@@ -465,7 +465,7 @@ So, if:</p>
 <blockquote>
 <div class="line-block">
 <div class="line"><span class="formula"><i>t</i><sub>1</sub></span> indexes documents  1 2 3 5 8</div>
-<div class="line"><span class="formula"><i>t</i><sub>1</sub></span> indexes documents  2 3 6</div>
+<div class="line"><span class="formula"><i>t</i><sub>2</sub></span> indexes documents  2 3 6</div>
 </div>
 </blockquote>
 <p>then</p>
@@ -587,7 +587,7 @@ numeric weight to a term t of Q. Just how this weight gets used we will
 see below, but essentially a high weight means an important term and a
 low weight means an unimportant term. The formula is,</p>
 <div class="formula">
-<i>w</i>(<i>t</i>) = log  <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>p</i>(1 − <i>q</i>)</span><span class="ignored">)/(</span><span class="denominator">(1 − <i>p</i>)<i>q</i></span><span class="ignored">)</span></span>
+<i>w</i>(<i>t</i>) = log  <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>p</i>(1 − <i>q</i>)</span><span class="ignored">)/(</span><span class="denominator">(1 − <i>p</i>)<i>q</i></span><span class="ignored">)</span></span>
 </div>
 <p>(The base of the logarithm doesn't matter, but we can suppose it is e.)
 p is the probability that t indexes a relevant document, and q the
@@ -596,10 +596,10 @@ is the probability that t does not index a relevant document, and 1 - q
 the probability that t does not index a non-relevant document. More
 mathematically,</p>
 <div class="formula">
-<i>p</i> = <i>P</i>(<i>t</i> → <i>D</i>|<i>D</i><i>in</i><i>R</i>)<i>q</i> = <i>P</i>(<i>t</i> → <i>D</i>|<i>D</i><i>not</i><i>in</i><i>R</i>)
+<i>p</i> = <i>P</i>(<i>t</i> → <i>D</i>|<i>D</i><i>in</i><i>R</i>)<i>q</i> = <i>P</i>(<i>t</i> → <i>D</i>|<i>D</i><i>not</i><i>in</i><i>R</i>)
 </div>
 <div class="formula">
-1 − <i>p</i> = <i>P</i>(<i>t</i><i>not</i> → <i>D</i>|<i>D</i><i>in</i><i>R</i>)1 − <i>q</i> = <i>P</i>(<i>t</i><i>not</i> → <i>D</i>|<i>D</i><i>not</i><i>in</i><i>R</i>)
+1 − <i>p</i> = <i>P</i>(<i>t</i><i>not</i> → <i>D</i>|<i>D</i><i>in</i><i>R</i>)1 − <i>q</i> = <i>P</i>(<i>t</i><i>not</i> → <i>D</i>|<i>D</i><i>not</i><i>in</i><i>R</i>)
 </div>
 <p>Suppose that t indexes n of the N documents in the IR system. As before,
 we suppose also that there are R documents in <em>R</em>, and that there are r
@@ -610,20 +610,20 @@ documents indexed by t to the total number of relevant documents.</p>
 those indexed by t is n - r, so we can estimate q as (n - r)/(N - R).
 This gives us the estimates,</p>
 <div class="formula">
-<i>p</i> =  <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>r</i></span><span class="ignored">)/(</span><span class="denominator"><i>R</i></span><span class="ignored">)</span></span>  ,   1 − <i>q</i> =  <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>N</i> − <i>R</i> − <i>n</i> + <i>r</i></span><span class="ignored">)/(</span><span class="denominator"><i>N</i> − <i>R</i></span><span class="ignored">)</span></span>
+<i>p</i> =  <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>r</i></span><span class="ignored">)/(</span><span class="denominator"><i>R</i></span><span class="ignored">)</span></span>  ,   1 − <i>q</i> =  <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>N</i> − <i>R</i> − <i>n</i> + <i>r</i></span><span class="ignored">)/(</span><span class="denominator"><i>N</i> − <i>R</i></span><span class="ignored">)</span></span>
 </div>
 <div class="formula">
-1 − <i>p</i> =  <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>R</i> − <i>r</i></span><span class="ignored">)/(</span><span class="denominator"><i>R</i></span><span class="ignored">)</span></span>  ,   <i>q</i> =  <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>n</i> − <i>r</i></span><span class="ignored">)/(</span><span class="denominator"><i>N</i> − <i>R</i></span><span class="ignored">)</span></span>
+1 − <i>p</i> =  <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>R</i> − <i>r</i></span><span class="ignored">)/(</span><span class="denominator"><i>R</i></span><span class="ignored">)</span></span>  ,   <i>q</i> =  <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>n</i> − <i>r</i></span><span class="ignored">)/(</span><span class="denominator"><i>N</i> − <i>R</i></span><span class="ignored">)</span></span>
 </div>
 <p>and so substituting in the formula for w(t) we get the estimate,</p>
 <div class="formula">
-<i>w</i>(<i>t</i>) = log  <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>r</i>(<i>N</i> − <i>R</i> − <i>n</i> + <i>r</i>)</span><span class="ignored">)/(</span><span class="denominator">(<i>R</i> − <i>r</i>)(<i>n</i> − <i>r</i>)</span><span class="ignored">)</span></span>
+<i>w</i>(<i>t</i>) = log  <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>r</i>(<i>N</i> − <i>R</i> − <i>n</i> + <i>r</i>)</span><span class="ignored">)/(</span><span class="denominator">(<i>R</i> − <i>r</i>)(<i>n</i> − <i>r</i>)</span><span class="ignored">)</span></span>
 </div>
 <p>Unfortunately, this formula is subject to violent behaviour when, say, n
 = r (infinity) or r = 0 (minus infinity), and so Robertson suggests the
 modified form</p>
 <div class="formula">
-<i>w</i>(<i>t</i>) = log  <span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>r</i> + <span class="fraction"><span class="ignored">(</span><span class="numerator">1</span><span class="ignored">)/(</span><span class="denominator">2</span><span class="ignored">)</span></span>)(<i>N</i> − <i>R</i> − <i>n</i> + <i>r</i> + <span class="fraction"><span class="ignored">(</span><span class="numerator">1</span><span class="ignored">)/(</span><span class="denominator">2</span><span class="ignored">)</span></span>)</span><span class="ignored">)/(</span><span class="denominator">(<i>R</i> − <i>r</i> + <span class="fraction"><span class="ignored">(</span><span class="numerator">1</span><span class="ignored">)/(</span><span class="denominator">2</span><span class="ignored">)</span></span>)(<i>n</i> − <i>r</i> + <span class="fraction"><span class="ignored">(</span><span class="numerator">1</span><span class="ignored">)/(</span><span class="denominator">2</span><span class="ignored">)</span></span>)</span><span class="ignored">)</span></span>
+<i>w</i>(<i>t</i>) = log  <span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>r</i> + <span class="fraction"><span class="ignored">(</span><span class="numerator">1</span><span class="ignored">)/(</span><span class="denominator">2</span><span class="ignored">)</span></span>)(<i>N</i> − <i>R</i> − <i>n</i> + <i>r</i> + <span class="fraction"><span class="ignored">(</span><span class="numerator">1</span><span class="ignored">)/(</span><span class="denominator">2</span><span class="ignored">)</span></span>)</span><span class="ignored">)/(</span><span class="denominator">(<i>R</i> − <i>r</i> + <span class="fraction"><span class="ignored">(</span><span class="numerator">1</span><span class="ignored">)/(</span><span class="denominator">2</span><span class="ignored">)</span></span>)(<i>n</i> − <i>r</i> + <span class="fraction"><span class="ignored">(</span><span class="numerator">1</span><span class="ignored">)/(</span><span class="denominator">2</span><span class="ignored">)</span></span>)</span><span class="ignored">)</span></span>
 </div>
 <p>with the reassurance that this has &quot;some theoretical justification&quot;.
 This is the form of the term weighting formula used in Xapian's
@@ -645,7 +645,7 @@ set of documents which have been judged as relevant.</p>
 <p>Suppose we have no documents marked as relevant. Then R = r = 0, and
 w(t) becomes,</p>
 <div class="formula">
-log <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>N</i> − <i>n</i> + <span class="fraction"><span class="ignored">(</span><span class="numerator">1</span><span class="ignored">)/(</span><span class="denominator">2</span><span class="ignored">)</span></span></span><span class="ignored">)/(</span><span class="denominator"><i>n</i> + <span class="fraction"><span class="ignored">(</span><span class="numerator">1</span><span class="ignored">)/(</span><span class="denominator">2</span><span class="ignored">)</span></span></span><span class="ignored">)</span></span>
+log <span class="fraction"><span class="ignored">(</span><span class="numerator"><i>N</i> − <i>n</i> + <span class="fraction"><span class="ignored">(</span><span class="numerator">1</span><span class="ignored">)/(</span><span class="denominator">2</span><span class="ignored">)</span></span></span><span class="ignored">)/(</span><span class="denominator"><i>n</i> + <span class="fraction"><span class="ignored">(</span><span class="numerator">1</span><span class="ignored">)/(</span><span class="denominator">2</span><span class="ignored">)</span></span></span><span class="ignored">)</span></span>
 </div>
 <p>This is approximately log((N - n)/n). Or log(N/n), since n is usually
 small compared with N. This is called inverse logarithmic weighting, and
@@ -663,16 +663,16 @@ disallowed, and simply replaced by a small positive value.</p>
 <h1>wdp, wdf, ndl and wqf</h1>
 <p>Before we see how the weights are used there are a few more ideas to
 introduce.</p>
-<p>As mentioned before, a term t is said to index a document D, or <span class="formula"><i>t</i> → <i>D</i></span>.
+<p>As mentioned before, a term t is said to index a document D, or <span class="formula"><i>t</i> → <i>D</i></span>.
 We have emphasised that D may not be a piece of text in machine-readable
 form, and that, even when it is, t may not actually occur in the text of
 D. Nevertheless, it will often be the case that D is made up of a list
 of words,</p>
-<p><span class="formula"><i>D</i> = <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>, <i>w</i><sub>3</sub></span> ... <span class="formula"><i>w</i><sub><i>m</i></sub></span></p>
+<p><span class="formula"><i>D</i> = <i>w</i><sub>1</sub>, <i>w</i><sub>2</sub>, <i>w</i><sub>3</sub></span> ... <span class="formula"><i>w</i><sub><i>m</i></sub></span></p>
 <p>and that many, if not all, of the terms which index D derive from these
 words (for example, the terms are often lower-cased and stemmed forms of
 these words).</p>
-<p>If a term derives from words <span class="formula"><i>w</i><sub>9</sub>, <i>w</i><sub>38</sub>, <i>w</i><sub>97</sub></span> and <span class="formula"><i>w</i><sub>221</sub></span> in the indexing
+<p>If a term derives from words <span class="formula"><i>w</i><sub>9</sub>, <i>w</i><sub>38</sub>, <i>w</i><sub>97</sub></span> and <span class="formula"><i>w</i><sub>221</sub></span> in the indexing
 process, we can say that the term &quot;occurs&quot; in D at positions 9, 38, 97 and
 221, and so for each term a document may have a vector of positional
 information. These are the <em>within-document positions</em> of t, or the <em>wdp</em>
@@ -707,15 +707,15 @@ wqp, wqf and nql. Xapian does not currently use the concept of wqp.</p>
 <p>Now to pull everything together. From the probabilistic term weights we
 can assign a weight to any document, d, as follows,</p>
 <div class="formula">
-<i>W</i>(<i>d</i>) = <span class="limits"><sup class="limit"> </sup><span class="limit">⎲</span><span class="limit">⎳</span><sub class="limit"><i>t</i> → <i>d</i>, <i>t</i> ∈ <i>Q</i></sub></span> <span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i> + 1)<i>f</i><sub><i>t</i></sub></span><span class="ignored">)/(</span><span class="denominator"><i>k</i>.<i>L</i><sub><i>d</i></sub> + <i>f</i><sub><i>t</i></sub></span><span class="ignored">)</span></span> <i>w</i>(<i>t</i>)
+<i>W</i>(<i>d</i>) = <span class="limits"><sup class="limit"> </sup><span class="limit"><span class="bigoperator">∑</span></span><sub class="limit"><i>t</i> → <i>d</i>, <i>t</i> ∈ <i>Q</i></sub></span> <span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i> + 1)<i>f</i><sub><i>t</i></sub></span><span class="ignored">)/(</span><span class="denominator"><i>k</i>.<i>L</i><sub><i>d</i></sub> + <i>f</i><sub><i>t</i></sub></span><span class="ignored">)</span></span> <i>w</i>(<i>t</i>)
 </div>
 <p>The sum extends over the terms of <em>Q</em> which index d. <span class="formula"><i>f</i><sub><i>t</i></sub></span> is
 the wdf of t in d, <span class="formula"><i>L</i><sub><i>d</i></sub></span> is the ndl of d, and k is some suitably
 chosen constant.</p>
-<p>The factor <span class="formula"><i>k</i> + 1</span> is actually redundant, but helps with the interpretation
+<p>The factor <span class="formula"><i>k</i> + 1</span> is actually redundant, but helps with the interpretation
 of the equation. In Xapian, this weighting scheme is implemented by the
 <a class="reference external" href="apidoc/html/classXapian_1_1TradWeight.html">Xapian::TradWeight class</a>
-and the factor <span class="formula">(<i>k</i> + 1)</span> is ignored.</p>
+and the factor <span class="formula">(<i>k</i> + 1)</span> is ignored.</p>
 <p>If <span class="formula"><i>k</i></span> is set to zero the factor before <span class="formula"><i>w</i>(<i>t</i>)</span> is 1, and the wdfs are
 ignored. As k tends to infinity, the factor becomes
 <span class="formula"><i>f</i><sub><i>t</i></sub></span>/<span class="formula"><i>L</i><sub><i>d</i></sub></span>, and the wdfs take on their greatest
@@ -728,21 +728,21 @@ users observe a simple pattern of retrieval. It is possible to tune <span class=
 provide optimal results for a specific system.</p>
 <p>Any <span class="formula"><i>d</i></span> in the IR system has a value <span class="formula"><i>W</i>(<i>d</i>)</span>, but, if no term of the query
 indexes <span class="formula"><i>d</i></span>, <span class="formula"><i>W</i>(<i>d</i>)</span> will be zero. In practice only documents for which
-<span class="formula"><i>W</i>(<i>d</i>) &gt; 0</span> will be of interest, and these are the documents indexed by at least
+<span class="formula"><i>W</i>(<i>d</i>) &gt; 0</span> will be of interest, and these are the documents indexed by at least
 one term of <em>Q</em>. If we now take these documents and arrange them by
 decreasing <span class="formula"><i>W</i>(<i>d</i>)</span> value, we get a ranked list called the <em>match set</em>, or
 <em>MSet</em>, of document and weight pairs:</p>
 <div class="formula">
-<i>item</i>0 :  <i>D</i><sub>0</sub>, <i>W</i>(<i>D</i><sub>0</sub>)
+<i>item</i>0 :  <i>D</i><sub>0</sub>, <i>W</i>(<i>D</i><sub>0</sub>)
 </div>
 <div class="formula">
-<i>item</i>1 :  <i>D</i><sub>1</sub>, <i>W</i>(<i>D</i><sub>1</sub>)
+<i>item</i>1 :  <i>D</i><sub>1</sub>, <i>W</i>(<i>D</i><sub>1</sub>)
 </div>
 <div class="formula">
-<i>item</i>2 :  <i>D</i><sub>2</sub>, <i>W</i>(<i>D</i><sub>2</sub>)
+<i>item</i>2 :  <i>D</i><sub>2</sub>, <i>W</i>(<i>D</i><sub>2</sub>)
 </div>
 <div class="formula">
-<span class="environment"><span class="arrayrow">
+<span class="environment align"><span class="arrayrow">
 <span class="arraycell align-r">
 <span class="text">. <br/>
       . <br/>
@@ -753,10 +753,10 @@ decreasing <span class="formula"><i>W</i>(<i>d</i>)</span> value, we get a ranke
 </span>
 </div>
 <div class="formula">
-<i>item</i><i>K</i> :  <i>D</i><sub><i>K</i></sub>, <i>W</i>(<i>D</i><sub><i>K</i></sub>)
+<i>item</i><i>K</i> :  <i>D</i><sub><i>K</i></sub>, <i>W</i>(<i>D</i><sub><i>K</i></sub>)
 </div>
-<p>where <span class="formula"><i>W</i>(<i>D</i><sub><i>j</i></sub>) ≥ <i>W</i>(<i>D</i><sub><i>i</i></sub>)</span> if j &gt; i.</p>
-<p>And according to the probabilistic model, the documents <span class="formula"><i>D</i><sub>0</sub>, <i>D</i><sub>1</sub>, <i>D</i><sub>2</sub>...</span>
+<p>where <span class="formula"><i>W</i>(<i>D</i><sub><i>j</i></sub>) ≥ <i>W</i>(<i>D</i><sub><i>i</i></sub>)</span> if j &gt; i.</p>
+<p>And according to the probabilistic model, the documents <span class="formula"><i>D</i><sub>0</sub>, <i>D</i><sub>1</sub>, <i>D</i><sub>2</sub>...</span>
 are ranked by decreasing order of probability of relevance. So <span class="formula"><i>D</i><sub>0</sub></span> has highest
 probability of being relevant, then <span class="formula"><i>D</i><sub>1</sub></span> and so on.</p>
 <p>Xapian creates the MSet from the posting lists of the terms of the
@@ -772,7 +772,7 @@ documents found in the match process.</p>
 <p>A modification of this weighting scheme can be employed that takes into
 account the query itself:</p>
 <div class="formula">
-<i>W</i>(<i>d</i>) = <span class="limits"><sup class="limit"> </sup><span class="limit">⎲</span><span class="limit">⎳</span><sub class="limit"><i>t</i> → <i>d</i>,  <i>t</i> ∈ <i>Q</i></sub></span><span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i><sub>3</sub> + 1)<i>q</i><sub><i>t</i></sub></span><span class="ignored">)/(</span><span class="denominator">(<i>k</i><sub>3</sub><i>L</i>’ + <i>q</i><sub><i>t</i></sub>)</span><span class="ignored">)</span></span>  <span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i> + 1)<i>f</i><sub><i>t</i></sub></span><span class="ignored">)/(</span><span class="denominator">(<i>kL</i><sub><i>d</i></sub> + <i>f</i><sub><i>t</i></sub>)</span><span class="ignored">)</span></span> <i>w</i>(<i>t</i>)
+<i>W</i>(<i>d</i>) = <span class="limits"><sup class="limit"> </sup><span class="limit"><span class="bigoperator">∑</span></span><sub class="limit"><i>t</i> → <i>d</i>,  <i>t</i> ∈ <i>Q</i></sub></span><span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i><sub>3</sub> + 1)<i>q</i><sub><i>t</i></sub></span><span class="ignored">)/(</span><span class="denominator">(<i>k</i><sub>3</sub><i>L</i>’ + <i>q</i><sub><i>t</i></sub>)</span><span class="ignored">)</span></span>  <span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i> + 1)<i>f</i><sub><i>t</i></sub></span><span class="ignored">)/(</span><span class="denominator">(<i>kL</i><sub><i>d</i></sub> + <i>f</i><sub><i>t</i></sub>)</span><span class="ignored">)</span></span> <i>w</i>(<i>t</i>)
 </div>
 <p>where <span class="formula"><i>q</i><sub><i>t</i></sub></span> is the wqf of t in <em>Q</em>, <span class="formula"><i>L</i>’</span> is the nql, or normalised
 query length, and <span class="formula"><i>k</i><sub>3</sub></span> is a further constant. In computing <span class="formula"><i>W</i>(<i>d</i>)</span>
@@ -797,21 +797,21 @@ this list of terms is mainly used for query expansion, it is called the
 <em>expand set</em> or <em>ESet</em>.</p>
 <p>The term expansion weighting formula is as follows,</p>
 <blockquote>
-<span class="formula"><i>W</i>(<i>t</i>) = <i>r</i> <i>w</i>(<i>t</i>)</span></blockquote>
+<span class="formula"><i>W</i>(<i>t</i>) = <i>r</i> <i>w</i>(<i>t</i>)</span></blockquote>
 <p>in other words we multiply the term weight by the number of relevant
 documents that have been indexed by the term.</p>
 <p>The ESet then has this form,</p>
 <div class="formula">
-<i>item</i>0 :  <i>t</i><sub>0</sub>, <i>W</i>(<i>t</i><sub>0</sub>)
+<i>item</i>0 :  <i>t</i><sub>0</sub>, <i>W</i>(<i>t</i><sub>0</sub>)
 </div>
 <div class="formula">
-<i>item</i>1 :  <i>t</i><sub>1</sub>, <i>W</i>(<i>t</i><sub>1</sub>)
+<i>item</i>1 :  <i>t</i><sub>1</sub>, <i>W</i>(<i>t</i><sub>1</sub>)
 </div>
 <div class="formula">
-<i>item</i>2 :  <i>t</i><sub>2</sub>, <i>W</i>(<i>t</i><sub>2</sub>)
+<i>item</i>2 :  <i>t</i><sub>2</sub>, <i>W</i>(<i>t</i><sub>2</sub>)
 </div>
 <div class="formula">
-<span class="environment"><span class="arrayrow">
+<span class="environment align"><span class="arrayrow">
 <span class="arraycell align-r">
 <span class="text">. <br/>
       . <br/>
@@ -822,9 +822,9 @@ documents that have been indexed by the term.</p>
 </span>
 </div>
 <div class="formula">
-<i>item</i><i>K</i> :  <i>t</i><sub><i>K</i></sub>, <i>W</i>(<i>t</i><sub><i>K</i></sub>)
+<i>item</i><i>K</i> :  <i>t</i><sub><i>K</i></sub>, <i>W</i>(<i>t</i><sub><i>K</i></sub>)
 </div>
-<p>where <span class="formula"><i>W</i>(<i>t</i><sub><i>j</i></sub>) ≥ <i>W</i>(<i>t</i><sub><i>i</i></sub>)</span> if j &gt; i.</p>
+<p>where <span class="formula"><i>W</i>(<i>t</i><sub><i>j</i></sub>) ≥ <i>W</i>(<i>t</i><sub><i>i</i></sub>)</span> if j &gt; i.</p>
 <p>Since the main function of the ESet is to find new terms to be added to
 <em>Q</em>, we usually omit from it terms already in <em>Q</em>.</p>
 <p>The <span class="formula"><i>W</i>(<i>t</i>)</span> weight is applicable to any term in the IR system, but has a
@@ -835,13 +835,13 @@ relevant documents.</p>
 seems less than optimal because it does not take into account wdf
 information. One can if fact try to generalise it to:</p>
 <div class="formula">
-<i>W</i>(<i>t</i>) = <span class="limits"><sup class="limit"> </sup><span class="limit">⎲</span><span class="limit">⎳</span><sub class="limit"><i>t</i> → <i>d</i>, <i>d</i> ∈ <i>R</i></sub></span> <span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i> + 1)<i>f</i><sub><i>t</i></sub></span><span class="ignored">)/(</span><span class="denominator"><i>kL</i> + <i>f</i><sub><i>t</i></sub></span><span class="ignored">)</span></span><i>w</i>(<i>t</i>)
+<i>W</i>(<i>t</i>) = <span class="limits"><sup class="limit"> </sup><span class="limit"><span class="bigoperator">∑</span></span><sub class="limit"><i>t</i> → <i>d</i>, <i>d</i> ∈ <i>R</i></sub></span> <span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i> + 1)<i>f</i><sub><i>t</i></sub></span><span class="ignored">)/(</span><span class="denominator"><i>kL</i> + <i>f</i><sub><i>t</i></sub></span><span class="ignored">)</span></span><i>w</i>(<i>t</i>)
 </div>
 <p><span class="formula"><i>k</i></span> is again a constant, but it does not need to have the same value as
 the <span class="formula"><i>k</i></span> used in the probabilistic term weights above. In Xapian, <span class="formula"><i>k</i></span>
 defaults to 1.0 for ESet generation.</p>
-<p>This reduces to <span class="formula"><i>W</i>(<i>t</i>) = <i>r</i> <i>w</i>(<i>t</i>)</span> when <span class="formula"><i>k</i> = 0</span>. Certainly this form can be
-recommended in the very common case where <span class="formula"><i>r</i> = 1</span>, that is, we have a
+<p>This reduces to <span class="formula"><i>W</i>(<i>t</i>) = <i>r</i> <i>w</i>(<i>t</i>)</span> when <span class="formula"><i>k</i> = 0</span>. Certainly this form can be
+recommended in the very common case where <span class="formula"><i>r</i> = 1</span>, that is, we have a
 single document marked relevant.</p>
 </div>
 <div class="section" id="the-progress-of-a-query">

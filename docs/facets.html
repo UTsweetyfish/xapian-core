@@ -1,20 +1,20 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.16: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.20.1: https://docutils.sourceforge.io/" />
 <title>Xapian Faceting Support</title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7952 2016-07-26 18:15:59Z milde $
+:Id: $Id: html4css1.css 8954 2022-01-20 10:10:25Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
 
-See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+See https://docutils.sourceforge.io/docs/howto/html-stylesheets.html for how to
 customize this style sheet.
 */
 
@@ -369,12 +369,12 @@ ul.auto-toc {
 <div class="contents topic" id="table-of-contents">
 <p class="topic-title">Table of contents</p>
 <ul class="simple">
-<li><a class="reference internal" href="#introduction" id="id1">Introduction</a></li>
-<li><a class="reference internal" href="#how-to-use-faceting" id="id2">How to use Faceting</a><ul>
-<li><a class="reference internal" href="#indexing" id="id3">Indexing</a></li>
-<li><a class="reference internal" href="#searching" id="id4">Searching</a><ul>
-<li><a class="reference internal" href="#finding-facets" id="id5">Finding Facets</a></li>
-<li><a class="reference internal" href="#restricting-by-facet-values" id="id6">Restricting by Facet Values</a></li>
+<li><a class="reference internal" href="#introduction" id="toc-entry-1">Introduction</a></li>
+<li><a class="reference internal" href="#how-to-use-faceting" id="toc-entry-2">How to use Faceting</a><ul>
+<li><a class="reference internal" href="#indexing" id="toc-entry-3">Indexing</a></li>
+<li><a class="reference internal" href="#searching" id="toc-entry-4">Searching</a><ul>
+<li><a class="reference internal" href="#finding-facets" id="toc-entry-5">Finding Facets</a></li>
+<li><a class="reference internal" href="#restricting-by-facet-values" id="toc-entry-6">Restricting by Facet Values</a></li>
 </ul>
 </li>
 </ul>
@@ -382,7 +382,7 @@ ul.auto-toc {
 </ul>
 </div>
 <div class="section" id="introduction">
-<h1><a class="toc-backref" href="#id1">Introduction</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-1">Introduction</a></h1>
 <p>Xapian provides functionality which allows you to dynamically generate complete
 lists of category values which feature in matching documents.  There are
 numerous potential uses this can be put to, but a common one is to offer the
@@ -393,9 +393,9 @@ referred to as <tt class="docutils literal">faceted search</tt>.</p>
 type) so Xapian allows you to handle multiple facets at once.</p>
 </div>
 <div class="section" id="how-to-use-faceting">
-<h1><a class="toc-backref" href="#id2">How to use Faceting</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-2">How to use Faceting</a></h1>
 <div class="section" id="indexing">
-<h2><a class="toc-backref" href="#id3">Indexing</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-3">Indexing</a></h2>
 <p>When indexing a document, you need to add each facet in a different numbered
 value slot.  As described elsewhere in the documentation, each Xapian document
 has a set of &quot;value slots&quot;, each of which is addressed by a number, and can
@@ -408,9 +408,9 @@ values in slot 1, &quot;publisher&quot; facet values in slot 2 and &quot;publica
 (eg, hardback, softback, etc) values in slot 3.</p>
 </div>
 <div class="section" id="searching">
-<h2><a class="toc-backref" href="#id4">Searching</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-4">Searching</a></h2>
 <div class="section" id="finding-facets">
-<h3><a class="toc-backref" href="#id5">Finding Facets</a></h3>
+<h3><a class="toc-backref" href="#toc-entry-5">Finding Facets</a></h3>
 <p>At search time, for each facet you want to consider, you need to get a count of
 the number of times each facet value occurs in each slot; for the example
 above, if you wanted to get facets for &quot;price&quot;, &quot;author&quot; and &quot;publication type&quot;
@@ -450,7 +450,7 @@ for (i = spy0.values_begin(); i != spy0.values_end(); ++i) {
 </pre>
 </div>
 <div class="section" id="restricting-by-facet-values">
-<h3><a class="toc-backref" href="#id6">Restricting by Facet Values</a></h3>
+<h3><a class="toc-backref" href="#toc-entry-6">Restricting by Facet Values</a></h3>
 <p>If you're using the facets to offer the user choices for narrowing down
 their search results, you then need to be able to apply a suitable filter.</p>
 <p>For a single value, you could use <tt class="docutils literal"><span class="pre">Xapian::Query::OP_VALUE_RANGE</span></tt> with the

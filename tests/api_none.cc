@@ -59,6 +59,11 @@ DEFINE_TESTCASE(nosubdatabases1, !backend) {
     TEST_EXCEPTION(Xapian::InvalidOperationError, db.get_doclength(1));
     TEST_EXCEPTION(Xapian::InvalidOperationError, db.get_unique_terms(1));
     TEST_EXCEPTION(Xapian::InvalidOperationError, db.get_document(1));
+
+    Xapian::WritableDatabase wdb;
+    TEST_EXCEPTION(Xapian::InvalidOperationError, wdb.begin_transaction());
+    TEST_EXCEPTION(Xapian::InvalidOperationError, wdb.commit_transaction());
+    TEST_EXCEPTION(Xapian::InvalidOperationError, wdb.cancel_transaction());
 }
 
 /// Feature test for Document::add_boolean_term(), new in 1.0.18/1.1.4.
@@ -992,9 +997,8 @@ DEFINE_TESTCASE(errorcopyctor, !backend) {
     Xapian::RangeError e("test");
     try {
 	errorcopyctor_helper(e);
-	FAIL_TEST("Expected exception to be thrown");
     } catch (Xapian::Error&) {
 	return;
     }
-    FAIL_TEST("Expected RangeError wasn't caught");
+    FAIL_TEST("Expected exception to be thrown");
 }

@@ -1,3 +1,40 @@
+xapian-core (1.4.25-1) unstable; urgency=medium
+
+  * New upstream release.
+  * debian/control.in: Mark conformance with policy 4.7.0.
+  * debian/clean: Remove build tree(s) on clean.  (Closes: #1048438)
+
+ -- Olly Betts <olly@survex.com>  Tue, 09 Apr 2024 16:23:16 +1200
+
+xapian-core (1.4.22-1) unstable; urgency=medium
+
+  * New upstream release.
+  * debian/control.in: Mark conformance with policy 4.6.2.
+
+ -- Olly Betts <olly@survex.com>  Thu, 02 Feb 2023 15:28:57 +1300
+
+xapian-core (1.4.21-1) unstable; urgency=medium
+
+  * New upstream release.
+  * debian/upstream/signing-key.asc: Convert from deprecated binary format.
+
+ -- Olly Betts <olly@survex.com>  Fri, 23 Sep 2022 14:55:58 +1200
+
+xapian-core (1.4.20-2) unstable; urgency=medium
+
+  * debian/xapian-tools.lintian-overrides: Drop overrides which are
+    no longer needed.
+
+ -- Olly Betts <olly@survex.com>  Sat, 09 Jul 2022 07:39:32 +1200
+
+xapian-core (1.4.20-1) unstable; urgency=medium
+
+  * New upstream release.
+  * debian/control.in: Mark conformance with policy 4.6.1.
+  * debian/source/lintian-overrides: Override bogus source-is-missing.
+
+ -- Olly Betts <olly@survex.com>  Fri, 08 Jul 2022 11:46:50 +1200
+
 xapian-core (1.4.18-4) unstable; urgency=medium
 
   * debian/copyright: Strip trailing whitespace.

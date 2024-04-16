@@ -46,7 +46,7 @@ DEFINE_TESTCASE(consistency3, backend) {
     TEST_EQUAL(bigmset.size(), lots);
     for (Xapian::doccount start = 0; start < lots; ++start) {
 	tout << *bigmset[start] << ":" << bigmset[start].get_weight() << ":"
-	     << bigmset[start].get_percent() << "%" << endl;
+	     << bigmset[start].get_percent() << "%\n";
 	for (Xapian::doccount size = 0; size < lots - start; ++size) {
 	    Xapian::MSet mset = enquire.get_mset(start, size);
 	    if (mset.size()) {
@@ -277,7 +277,7 @@ make_topercent7_db(Xapian::WritableDatabase &db, const string &)
 /// Test that a term with wdf always = 0 gets counted.
 //  Regression test for bug introduced in 1.2.10 by the original fix for #590,
 //  and fixed in 1.2.13 (and in trunk before 1.3.1 was released).
-DEFINE_TESTCASE(topercent7, generated) {
+DEFINE_TESTCASE(topercent7, backend) {
     Xapian::Database db(get_database("topercent7", make_topercent7_db));
 
     Xapian::Query q;

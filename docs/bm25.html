@@ -1,20 +1,20 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.16: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.20.1: https://docutils.sourceforge.io/" />
 <title>The BM25 Weighting Scheme</title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7952 2016-07-26 18:15:59Z milde $
+:Id: $Id: html4css1.css 8954 2022-01-20 10:10:25Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
 
-See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+See https://docutils.sourceforge.io/docs/howto/html-stylesheets.html for how to
 customize this style sheet.
 */
 
@@ -376,7 +376,7 @@ BM25.</p>
 <p>In its most general form, the traditional probabilistic term weighting
 function is:</p>
 <div class="formula">
-<span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i><sub>3</sub> + 1)<i>q</i></span><span class="ignored">)/(</span><span class="denominator">(<i>k</i><sub>3</sub> + <i>q</i>)</span><span class="ignored">)</span></span><span class="text"> * </span><span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i><sub>1</sub> + 1)<i>f</i></span><span class="ignored">)/(</span><span class="denominator">(<i>k</i><sub>1</sub><i>L</i> + <i>f</i>)</span><span class="ignored">)</span></span><span class="text"> * </span>log<span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>r</i> + 0.5)(<i>N</i> − <i>n</i> − <i>R</i> + <i>r</i> + 0.5)</span><span class="ignored">)/(</span><span class="denominator">(<i>n</i> − <i>r</i> + 0.5)(<i>R</i> − <i>r</i> + 0.5)</span><span class="ignored">)</span></span>...(1)
+<span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i><sub>3</sub> + 1)<i>q</i></span><span class="ignored">)/(</span><span class="denominator">(<i>k</i><sub>3</sub> + <i>q</i>)</span><span class="ignored">)</span></span><span class="text"> * </span><span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i><sub>1</sub> + 1)<i>f</i></span><span class="ignored">)/(</span><span class="denominator">(<i>k</i><sub>1</sub><i>L</i> + <i>f</i>)</span><span class="ignored">)</span></span><span class="text"> * </span>log<span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>r</i> + 0.5)(<i>N</i> − <i>n</i> − <i>R</i> + <i>r</i> + 0.5)</span><span class="ignored">)/(</span><span class="denominator">(<i>n</i> − <i>r</i> + 0.5)(<i>R</i> − <i>r</i> + 0.5)</span><span class="ignored">)</span></span>...(1)
 </div>
 <p>where</p>
 <blockquote>
@@ -392,8 +392,8 @@ function is:</p>
 divided by the average length of documents in the collection).</li>
 </ul>
 </blockquote>
-<p>The factors <span class="formula">(<i>k</i><sub>3</sub> + 1)</span> and <span class="formula">(<i>k</i><sub>1</sub> + 1)</span> are unnecessary here, but help
-scale the weights, so the first component is 1 when <span class="formula"><i>q</i> = 1</span> etc. But
+<p>The factors <span class="formula">(<i>k</i><sub>3</sub> + 1)</span> and <span class="formula">(<i>k</i><sub>1</sub> + 1)</span> are unnecessary here, but help
+scale the weights, so the first component is 1 when <span class="formula"><i>q</i> = 1</span> etc. But
 they are critical below when we add an extra item to the sum of term
 weights.</p>
 </div>
@@ -403,28 +403,28 @@ weights.</p>
 adds an extra item to the sum of term weights to give the overall
 document score:</p>
 <div class="formula">
-<i>k</i><sub>2</sub><i>n</i><sub><i>q</i></sub><span class="fraction"><span class="ignored">(</span><span class="numerator">(1 − <i>L</i>)</span><span class="ignored">)/(</span><span class="denominator">(1 + <i>L</i>)</span><span class="ignored">)</span></span>...(2)
+<i>k</i><sub>2</sub><i>n</i><sub><i>q</i></sub><span class="fraction"><span class="ignored">(</span><span class="numerator">(1 − <i>L</i>)</span><span class="ignored">)/(</span><span class="denominator">(1 + <i>L</i>)</span><span class="ignored">)</span></span>...(2)
 </div>
 <p>where:</p>
 <ul class="simple">
 <li><span class="formula"><i>n</i><sub><i>q</i></sub></span> is the number of terms in the query (the query length),</li>
 <li><span class="formula"><i>k</i><sub>2</sub></span> is yet another constant.</li>
 </ul>
-<p>Note that this extra item is zero when <span class="formula"><i>L</i> = 1</span>.</p>
+<p>Note that this extra item is zero when <span class="formula"><i>L</i> = 1</span>.</p>
 </div>
 <div class="section" id="bm15">
 <h1>BM15</h1>
-<p>BM15 is BM11 with the <span class="formula"><i>k</i><sub>1</sub> + <i>f</i></span> in place of <span class="formula"><i>k</i><sub>1</sub><i>L</i> + <i>f</i></span> in <span class="formula">(1)</span>.</p>
+<p>BM15 is BM11 with the <span class="formula"><i>k</i><sub>1</sub> + <i>f</i></span> in place of <span class="formula"><i>k</i><sub>1</sub><i>L</i> + <i>f</i></span> in <span class="formula">(1)</span>.</p>
 </div>
 <div class="section" id="bm25">
 <h1>BM25</h1>
 <p>BM25 combines the B11 and B15 with a scaling factor, b, which turns BM15
 into BM11 as it moves from 0 to 1:</p>
 <div class="formula">
-<span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i><sub>3</sub> + 1)<i>q</i></span><span class="ignored">)/(</span><span class="denominator">(<i>k</i><sub>3</sub> + <i>q</i>)</span><span class="ignored">)</span></span><span class="text"> * </span><span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i><sub>1</sub> + 1)<i>f</i></span><span class="ignored">)/(</span><span class="denominator">(<i>K</i> + <i>f</i>)</span><span class="ignored">)</span></span><span class="text"> * </span>log<span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>r</i> + 0.5)(<i>N</i> − <i>n</i> − <i>R</i> + <i>r</i> + 0.5)</span><span class="ignored">)/(</span><span class="denominator">(<i>n</i> − <i>r</i> + 0.5)(<i>R</i> − <i>r</i> + 0.5)</span><span class="ignored">)</span></span>...(3)
+<span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i><sub>3</sub> + 1)<i>q</i></span><span class="ignored">)/(</span><span class="denominator">(<i>k</i><sub>3</sub> + <i>q</i>)</span><span class="ignored">)</span></span><span class="text"> * </span><span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>k</i><sub>1</sub> + 1)<i>f</i></span><span class="ignored">)/(</span><span class="denominator">(<i>K</i> + <i>f</i>)</span><span class="ignored">)</span></span><span class="text"> * </span>log<span class="fraction"><span class="ignored">(</span><span class="numerator">(<i>r</i> + 0.5)(<i>N</i> − <i>n</i> − <i>R</i> + <i>r</i> + 0.5)</span><span class="ignored">)/(</span><span class="denominator">(<i>n</i> − <i>r</i> + 0.5)(<i>R</i> − <i>r</i> + 0.5)</span><span class="ignored">)</span></span>...(3)
 </div>
 <p>where:</p>
-<p><span class="formula"><i>K</i> = <i>k</i><sub>1</sub>(<i>bL</i> + (1 − <i>b</i>))</span></p>
+<p><span class="formula"><i>K</i> = <i>k</i><sub>1</sub>(<i>bL</i> + (1 − <i>b</i>))</span></p>
 <p>BM25 originally introduced another constant, as a power to which f and K
 are raised. However, Stephen remarks that powers other than 1 were <em>'not
 helpful'</em>, and other tests confirm this, so Xapian's implementation of
@@ -432,10 +432,10 @@ BM25 ignores this.</p>
 <p><span class="formula">(2)</span> and <span class="formula">(3)</span> make up BM25, with which Stephen has had so much
 recent success.</p>
 <p>This does all seem somewhat ad-hoc, with so many unknown constants in
-the formula. But note that with <span class="formula"><i>k</i><sub>2</sub> = 0</span> and <span class="formula"><i>b</i> = 1</span> we get the
+the formula. But note that with <span class="formula"><i>k</i><sub>2</sub> = 0</span> and <span class="formula"><i>b</i> = 1</span> we get the
 traditional formula anyway.</p>
-<p>The default parameter values Xapian uses are <span class="formula"><i>k</i><sub>1</sub> = 1</span>, <span class="formula"><i>k</i><sub>2</sub> = 0</span>,
-<span class="formula"><i>k</i><sub>3</sub> = 1</span>,and <span class="formula"><i>b</i> = 0.5</span>. These are reasonable defaults, but the
+<p>The default parameter values Xapian uses are <span class="formula"><i>k</i><sub>1</sub> = 1</span>, <span class="formula"><i>k</i><sub>2</sub> = 0</span>,
+<span class="formula"><i>k</i><sub>3</sub> = 1</span>,and <span class="formula"><i>b</i> = 0.5</span>. These are reasonable defaults, but the
 optimum values will vary with both the documents being searched and the
 type of queries, so you may be able to improve the effectiveness of your
 search system by tuning the values of these parameters.</p>
@@ -444,7 +444,7 @@ tiny documents get ridiculously high weights. And the matcher wants the
 extra item in the sum to be positive, so we add <span class="formula"><i>k</i><sub>2</sub><i>n</i><sub><i>q</i></sub></span> (constant for a
 given query) to <span class="formula">(2)</span> to give:</p>
 <div class="formula">
-<span class="fraction"><span class="ignored">(</span><span class="numerator">2<i>k</i><sub>2</sub><i>n</i><sub><i>q</i></sub></span><span class="ignored">)/(</span><span class="denominator">(1 + <i>L</i>)</span><span class="ignored">)</span></span>...(4)
+<span class="fraction"><span class="ignored">(</span><span class="numerator">2<i>k</i><sub>2</sub><i>n</i><sub><i>q</i></sub></span><span class="ignored">)/(</span><span class="denominator">(1 + <i>L</i>)</span><span class="ignored">)</span></span>...(4)
 </div>
 </div>
 </div>

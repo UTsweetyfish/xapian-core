@@ -296,6 +296,7 @@ SOURCEDOC_SRC=\
 	$T/common/safedirent.h\
 	$T/common/safefcntl.h\
 	$T/common/safenetdb.h\
+	$T/common/safesysexits.h\
 	$T/common/safesysselect.h\
 	$T/common/safesyssocket.h\
 	$T/common/safesysstat.h\
@@ -475,8 +476,6 @@ SOURCEDOC_SRC=\
 	$T/net/tcpclient.h\
 	$T/net/tcpserver.cc\
 	$T/net/tcpserver.h\
-	$T/queryparser/cjk-tokenizer.cc\
-	$T/queryparser/cjk-tokenizer.h\
 	$T/queryparser/queryparser.cc\
 	$(top_builddir)/queryparser/queryparser_internal.cc\
 	$T/queryparser/queryparser_internal.h\
@@ -485,6 +484,8 @@ SOURCEDOC_SRC=\
 	$T/queryparser/termgenerator.cc\
 	$T/queryparser/termgenerator_internal.cc\
 	$T/queryparser/termgenerator_internal.h\
+	$T/queryparser/word-breaker.cc\
+	$T/queryparser/word-breaker.h\
 	$(top_builddir)/unicode/c_istab.h\
 	$T/unicode/description_append.cc\
 	$T/unicode/description_append.h\

@@ -1,7 +1,7 @@
 /** @file
  *  @brief Xapian remote backend server base class
  */
-/* Copyright (C) 2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2019 Olly Betts
+/* Copyright (C) 2006-2023 Olly Betts
  * Copyright (C) 2006,2007,2009,2010 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or modify
@@ -77,15 +77,11 @@ RemoteServer::RemoteServer(const std::vector<std::string> &dbpaths,
 	// and then just use that instead.
 	context = dbpaths[0];
 
-	if (!writable) {
-	    vector<std::string>::const_iterator i(dbpaths.begin());
-	    for (++i; i != dbpaths.end(); ++i) {
-		db->add_database(Xapian::Database(*i));
-		context += ' ';
-		context += *i;
-	    }
-	} else {
-	    AssertEq(dbpaths.size(), 1); // Expecting exactly one database.
+	vector<std::string>::const_iterator i(dbpaths.begin());
+	for (++i; i != dbpaths.end(); ++i) {
+	    db->add_database(Xapian::Database(*i));
+	    context += ' ';
+	    context += *i;
 	}
     } catch (const Xapian::Error &err) {
 	// Propagate the exception to the client.
@@ -97,6 +93,11 @@ RemoteServer::RemoteServer(const std::vector<std::string> &dbpaths,
 #ifndef __WIN32__
     // It's simplest to just ignore SIGPIPE.  We'll still know if the
     // connection dies because we'll get EPIPE back from write().
+    //
+    // This is OK because RemoteServer subclasses are only used in
+    // specialised programs - if we expose any of them as API classes
+    // then we should use SO_NOSIGPIE/MSG_NOSIGNAL instead like we do
+    // on the client side.
     if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
 	throw Xapian::NetworkError("Couldn't set SIGPIPE to SIG_IGN", errno);
 #endif
@@ -250,10 +251,8 @@ RemoteServer::msg_allterms(const string &message)
     const string & prefix = message;
     const Xapian::TermIterator end = db->allterms_end(prefix);
     for (Xapian::TermIterator t = db->allterms_begin(prefix); t != end; ++t) {
-	if (rare(prev.size() > 255))
-	    prev.resize(255);
 	const string & v = *t;
-	size_t reuse = common_prefix_length(prev, v);
+	size_t reuse = common_prefix_length(prev, v, 255);
 	reply = encode_length(t.get_termfreq());
 	reply.append(1, char(reuse));
 	reply.append(v, reuse, string::npos);
@@ -276,10 +275,8 @@ RemoteServer::msg_termlist(const string &message)
     string prev;
     const Xapian::TermIterator end = db->termlist_end(did);
     for (Xapian::TermIterator t = db->termlist_begin(did); t != end; ++t) {
-	if (rare(prev.size() > 255))
-	    prev.resize(255);
 	const string & v = *t;
-	size_t reuse = common_prefix_length(prev, v);
+	size_t reuse = common_prefix_length(prev, v, 255);
 	string reply = encode_length(t.get_wdf());
 	reply += encode_length(t.get_termfreq());
 	reply.append(1, char(reuse));
@@ -750,10 +747,8 @@ RemoteServer::msg_openmetadatakeylist(const string & message)
     const Xapian::TermIterator end = db->metadata_keys_end(prefix);
     Xapian::TermIterator t = db->metadata_keys_begin(prefix);
     for (; t != end; ++t) {
-	if (rare(prev.size() > 255))
-	    prev.resize(255);
 	const string & v = *t;
-	size_t reuse = common_prefix_length(prev, v);
+	size_t reuse = common_prefix_length(prev, v, 255);
 	reply.assign(1, char(reuse));
 	reply.append(v, reuse, string::npos);
 	send_message(REPLY_METADATAKEYLIST, reply);

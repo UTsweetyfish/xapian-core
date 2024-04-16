@@ -259,6 +259,11 @@ class XAPIAN_VISIBILITY_DEFAULT Weight {
     /** @private @internal Initialise this object to calculate weights for term
      *  @a term.
      *
+     *  Old version of method, as used by 1.4.18 and earlier.  This
+     *  should only be referenced from inside the library and 1.4.19 and
+     *  later will call the new version instead.  We continue to provide it
+     *  mainly to avoid triggering ABI checking tools.
+     *
      *  @param stats	  Source of statistics.
      *  @param query_len_ Query length.
      *  @param term	  The term for the new object.
@@ -268,6 +273,23 @@ class XAPIAN_VISIBILITY_DEFAULT Weight {
     void init_(const Internal & stats, Xapian::termcount query_len_,
 	       const std::string & term, Xapian::termcount wqf_,
 	       double factor);
+
+    /** @private @internal Initialise this object to calculate weights for term
+     *  @a term.
+     *
+     *  @param stats	  Source of statistics.
+     *  @param query_len_ Query length.
+     *  @param term	  The term for the new object.
+     *  @param wqf_	  The within-query-frequency of @a term.
+     *  @param factor	  Any scaling factor (e.g. from OP_SCALE_WEIGHT).
+     *  @param postlist   Pointer to a LeafPostList for the term (cast to void*
+     *			  to avoid needing to forward declare class
+     *			  LeafPostList in public API headers) which can be used
+     *			  to get wdf upper bound
+     */
+    void init_(const Internal & stats, Xapian::termcount query_len_,
+	       const std::string & term, Xapian::termcount wqf_,
+	       double factor, void* postlist);
 
     /** @private @internal Initialise this object to calculate weights for a
      *  synonym.
@@ -470,7 +492,7 @@ class XAPIAN_VISIBILITY_DEFAULT TfIdfWeight : public Weight {
      *         which are indexed by the term t.
      *     @li 'p': Prob    idfn=log((N-Termfreq)/Termfreq)
      *     @li 'f': Freq    idfn=1/Termfreq
-     *     @li 's': Squared idfn=log(N/Termfreq)^2
+     *     @li 's': Squared idfn=(log(N/Termfreq))²
      *
      * @li The third and the final character indicates the normalization for
      *     the document weight.  The following normalizations are currently
@@ -696,11 +718,6 @@ class XAPIAN_VISIBILITY_DEFAULT BM25PlusWeight : public Weight {
 	if (param_k1 != 0 && param_b != 0) need_stat(DOC_LENGTH);
 	if (param_k2 != 0) need_stat(QUERY_LENGTH);
 	if (param_k3 != 0) need_stat(WQF);
-	if (param_delta != 0) {
-	    need_stat(AVERAGE_LENGTH);
-	    need_stat(DOC_LENGTH);
-	    need_stat(WQF);
-	}
     }
 
     BM25PlusWeight()

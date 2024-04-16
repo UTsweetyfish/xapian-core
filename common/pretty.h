@@ -1,7 +1,7 @@
 /** @file
  * @brief Convert types to pretty representations
  */
-/* Copyright (C) 2010,2011,2012,2014,2016 Olly Betts
+/* Copyright (C) 2010,2011,2012,2014,2016,2023 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -259,6 +259,13 @@ operator<<(PrettyOStream<S> &ps, const std::vector<T> & v) {
     return ps;
 }
 
+template<class S, typename T, typename U>
+inline PrettyOStream<S> &
+operator<<(PrettyOStream<S> &ps, const std::pair<T, U>& v) {
+    ps.os << "std::pair(" << v.first << ", " << v.second << ')';
+    return ps;
+}
+
 namespace Xapian {
     class ExpandDecider;
     class LatLongMetric;
@@ -340,7 +347,7 @@ template<class S, class T>
 inline PrettyOStream<S> &
 operator<<(PrettyOStream<S> &ps, Xapian::Internal::intrusive_ptr<const T> t) {
     ps.os << "intrusive_ptr->";
-    return ps << t;
+    return ps << t.get();
 }
 
 #endif // XAPIAN_INCLUDED_PRETTY_H

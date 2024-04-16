@@ -31,7 +31,7 @@
 /** @file
  * @brief build a Xapian::Query object from a user query string
  */
-/* Copyright (C) 2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2015,2016,2018,2019 Olly Betts
+/* Copyright (C) 2004-2023 Olly Betts
  * Copyright (C) 2007,2008,2009 Lemur Consulting Ltd
  * Copyright (C) 2010 Adam Sjøgren
  *
@@ -65,7 +65,7 @@
 // Include the list of token values lemon generates.
 #include "queryparser_token.h"
 
-#include "cjk-tokenizer.h"
+#include "word-breaker.h"
 
 #include <algorithm>
 #include <cstring>
@@ -210,11 +210,11 @@ class Term {
      */
     Query * as_partial_query(State * state_) const;
 
-    /** Build a query for a string of CJK characters. */
-    Query * as_cjk_query() const;
+    /** Build a query for a string of words without explicit word breaks. */
+    Query* as_unbroken_query() const;
 
-    /** Handle a CJK character string in a positional context. */
-    void as_positional_cjk_term(Terms * terms) const;
+    /** Handle text without explicit word breaks in a positional context. */
+    void as_positional_unbroken(Terms* terms) const;
 
     /// Range query.
     Query as_range_query() const;
@@ -232,11 +232,19 @@ class State {
 
   public:
     Query query;
-    const char * error;
+    const char* error = NULL;
     unsigned flags;
+    Query::op effective_default_op;
 
     State(QueryParser::Internal * qpi_, unsigned flags_)
-	: qpi(qpi_), error(NULL), flags(flags_) { }
+	: qpi(qpi_), flags(flags_), effective_default_op(qpi_->default_op)
+    {
+	if ((flags & QueryParser::FLAG_NO_POSITIONS)) {
+	    if (is_positional(effective_default_op)) {
+		effective_default_op = Query::OP_AND;
+		}
+	}
+    }
 
     string stem_term(const string &term) {
 	return qpi->stemmer(term);
@@ -277,7 +285,9 @@ class State {
 	return NULL;
     }
 
-    Query::op default_op() const { return qpi->default_op; }
+    Query::op default_op() const {
+	return effective_default_op;
+    }
 
     bool is_stopword(const Term *term) const {
 	return qpi->stopper.get() && (*qpi->stopper)(term->name);
@@ -529,18 +539,18 @@ Term::as_partial_query(State * state_) const
 }
 
 Query *
-Term::as_cjk_query() const
+Term::as_unbroken_query() const
 {
     vector<Query> prefix_subqs;
-    vector<Query> cjk_subqs;
+    vector<Query> ngram_subqs;
     const auto& prefixes = field_info->prefixes;
     for (const string& prefix : prefixes) {
-	for (CJKTokenIterator tk(name); tk != CJKTokenIterator(); ++tk) {
-	    cjk_subqs.push_back(Query(prefix + *tk, 1, pos));
+	for (NgramIterator tk(name); tk != NgramIterator(); ++tk) {
+	    ngram_subqs.push_back(Query(prefix + *tk, 1, pos));
 	}
 	prefix_subqs.push_back(Query(Query::OP_AND,
-				     cjk_subqs.begin(), cjk_subqs.end()));
-	cjk_subqs.clear();
+				     ngram_subqs.begin(), ngram_subqs.end()));
+	ngram_subqs.clear();
     }
     Query * q = new Query(Query::OP_OR,
 			  prefix_subqs.begin(), prefix_subqs.end());
@@ -719,7 +729,7 @@ QueryParser::Internal::add_boolean_prefix(const string &field,
 
 string
 QueryParser::Internal::parse_term(Utf8Iterator &it, const Utf8Iterator &end,
-				  bool cjk_ngram, bool & is_cjk_term,
+				  bool try_word_break, bool& needs_word_break,
 				  bool &was_acronym)
 {
     string term;
@@ -745,18 +755,18 @@ QueryParser::Internal::parse_term(Utf8Iterator &it, const Utf8Iterator &end,
     }
     was_acronym = !term.empty();
 
-    if (cjk_ngram && term.empty() && CJK::codepoint_is_cjk(*it)) {
-	const char* cjk = it.raw();
-	CJK::get_cjk(it);
-	term.assign(cjk, it.raw() - cjk);
-	is_cjk_term = true;
+    if (try_word_break && term.empty() && is_unbroken_script(*it)) {
+	const char* start = it.raw();
+	get_unbroken(it);
+	term.assign(start, it.raw() - start);
+	needs_word_break = true;
     }
 
     if (term.empty()) {
 	unsigned prevch = *it;
 	Unicode::append_utf8(term, prevch);
 	while (++it != end) {
-	    if (cjk_ngram && CJK::codepoint_is_cjk(*it)) break;
+	    if (try_word_break && is_unbroken_script(*it)) break;
 	    unsigned ch = *it;
 	    if (!is_wordchar(ch)) {
 		// Treat a single embedded '&' or "'" or similar as a word
@@ -812,7 +822,7 @@ QueryParser::Internal::parse_term(Utf8Iterator &it, const Utf8Iterator &end,
     return term;
 }
 
-#line 1402 "queryparser/queryparser.lemony"
+#line 1416 "queryparser/queryparser.lemony"
 
 
 struct ProbQuery {
@@ -1047,6 +1057,12 @@ reprocess:
 /// Some terms which form a positional sub-query.
 class Terms {
     vector<Term *> terms;
+
+    /** Window size.
+     *
+     *  size_t(-1) means don't use positional info (so an OP_AND query gets
+     *  created).
+     */
     size_t window;
 
     /** Keep track of whether the terms added all have the same list of
@@ -1065,8 +1081,18 @@ class Terms {
      */
     const vector<string>* prefixes;
 
+    Query opwindow_subq(Query::op op,
+			const vector<Query>& v,
+			Xapian::termcount w) const {
+	if (op == Query::OP_AND) {
+	    return Query(op, v.begin(), v.end());
+	}
+	return Query(op, v.begin(), v.end(), w);
+    }
+
     /// Convert to a query using the given operator and window size.
     Query * as_opwindow_query(Query::op op, Xapian::termcount w_delta) const {
+	if (window == size_t(-1)) op = Query::OP_AND;
 	Query * q = NULL;
 	size_t n_terms = terms.size();
 	Xapian::termcount w = w_delta + terms.size();
@@ -1078,8 +1104,7 @@ class Terms {
 		    for (Term* t : terms) {
 			subqs.push_back(Query(t->make_term(prefix), 1, t->pos));
 		    }
-		    add_to_query(q, Query::OP_OR,
-				 Query(op, subqs.begin(), subqs.end(), w));
+		    add_to_query(q, Query::OP_OR, opwindow_subq(op, subqs, w));
 		}
 	    }
 	} else {
@@ -1088,19 +1113,22 @@ class Terms {
 	    for (Term* t : terms) {
 		subqs.push_back(t->get_query());
 	    }
-	    q = new Query(op, subqs.begin(), subqs.end(), w);
+	    q = new Query(opwindow_subq(op, subqs, w));
 	}
 
 	delete this;
 	return q;
     }
 
-    Terms() : window(0), uniform_prefixes(true), prefixes(NULL) { }
+    explicit Terms(bool no_pos)
+	: window(no_pos ? size_t(-1) : 0),
+	  uniform_prefixes(true),
+	  prefixes(NULL) { }
 
   public:
     /// Factory function - ensures heap allocation.
-    static Terms* create() {
-	return new Terms();
+    static Terms* create(State* state) {
+	return new Terms(state->flags & QueryParser::FLAG_NO_POSITIONS);
     }
 
     ~Terms() {
@@ -1155,9 +1183,9 @@ class Terms {
 };
 
 void
-Term::as_positional_cjk_term(Terms * terms) const
+Term::as_positional_unbroken(Terms* terms) const
 {
-    // Add each individual CJK character to the phrase.
+    // Add each individual character to the phrase.
     string t;
     for (Utf8Iterator it(name); it != Utf8Iterator(); ++it) {
 	Unicode::append_utf8(t, *it);
@@ -1181,7 +1209,7 @@ Term::as_positional_cjk_term(Terms * terms) const
 	}\
     } while (0)
 
-#line 1185 "queryparser/queryparser_internal.cc"
+#line 1213 "queryparser/queryparser_internal.cc"
 /**************** End of %include directives **********************************/
 /* These constants specify the various numeric values for terminal symbols
 ** in a format understandable to "makeheaders".  This section is blank unless
@@ -1538,7 +1566,7 @@ static const char *const yyTokenName[] = {
   /*   19 */ "QUOTE",
   /*   20 */ "BRA",
   /*   21 */ "KET",
-  /*   22 */ "CJKTERM",
+  /*   22 */ "UNBROKEN_WORDS",
   /*   23 */ "EMPTY_GROUP_OK",
   /*   24 */ "error",
   /*   25 */ "query",
@@ -1596,11 +1624,11 @@ static const char *const yyRuleName[] = {
  /*  33 */ "compound_term ::= adj_expr",
  /*  34 */ "compound_term ::= BRA expr KET",
  /*  35 */ "compound_term ::= SYNONYM TERM",
- /*  36 */ "compound_term ::= CJKTERM",
+ /*  36 */ "compound_term ::= UNBROKEN_WORDS",
  /*  37 */ "phrase ::= TERM",
- /*  38 */ "phrase ::= CJKTERM",
+ /*  38 */ "phrase ::= UNBROKEN_WORDS",
  /*  39 */ "phrase ::= phrase TERM",
- /*  40 */ "phrase ::= phrase CJKTERM",
+ /*  40 */ "phrase ::= phrase UNBROKEN_WORDS",
  /*  41 */ "phrased_term ::= TERM PHR_TERM",
  /*  42 */ "phrased_term ::= phrased_term PHR_TERM",
  /*  43 */ "group ::= TERM GROUP_TERM",
@@ -1747,12 +1775,12 @@ static void yy_destructor(
     case 19: /* QUOTE */
     case 20: /* BRA */
     case 21: /* KET */
-    case 22: /* CJKTERM */
+    case 22: /* UNBROKEN_WORDS */
     case 23: /* EMPTY_GROUP_OK */
 {
-#line 1773 "queryparser/queryparser.lemony"
+#line 1805 "queryparser/queryparser.lemony"
  delete (yypminor->yy0); 
-#line 1756 "queryparser/queryparser_internal.cc"
+#line 1784 "queryparser/queryparser_internal.cc"
 }
       break;
     case 26: /* expr */
@@ -1762,17 +1790,17 @@ static void yy_destructor(
     case 32: /* stop_term */
     case 33: /* compound_term */
 {
-#line 1848 "queryparser/queryparser.lemony"
+#line 1880 "queryparser/queryparser.lemony"
  delete (yypminor->yy39); 
-#line 1768 "queryparser/queryparser_internal.cc"
+#line 1796 "queryparser/queryparser_internal.cc"
 }
       break;
     case 29: /* prob */
     case 31: /* stop_prob */
 {
-#line 1957 "queryparser/queryparser.lemony"
+#line 1989 "queryparser/queryparser.lemony"
  delete (yypminor->yy40); 
-#line 1776 "queryparser/queryparser_internal.cc"
+#line 1804 "queryparser/queryparser_internal.cc"
 }
       break;
     case 34: /* phrase */
@@ -1780,16 +1808,16 @@ static void yy_destructor(
     case 37: /* near_expr */
     case 38: /* adj_expr */
 {
-#line 2148 "queryparser/queryparser.lemony"
+#line 2180 "queryparser/queryparser.lemony"
  delete (yypminor->yy32); 
-#line 1786 "queryparser/queryparser_internal.cc"
+#line 1814 "queryparser/queryparser_internal.cc"
 }
       break;
     case 36: /* group */
 {
-#line 2189 "queryparser/queryparser.lemony"
+#line 2221 "queryparser/queryparser.lemony"
  delete (yypminor->yy14); 
-#line 1793 "queryparser/queryparser_internal.cc"
+#line 1821 "queryparser/queryparser_internal.cc"
 }
       break;
 /********* End destructor definitions *****************************************/
@@ -2083,11 +2111,11 @@ static const struct {
   {   33,   -1 }, /* (33) compound_term ::= adj_expr */
   {   33,   -3 }, /* (34) compound_term ::= BRA expr KET */
   {   33,   -2 }, /* (35) compound_term ::= SYNONYM TERM */
-  {   33,   -1 }, /* (36) compound_term ::= CJKTERM */
+  {   33,   -1 }, /* (36) compound_term ::= UNBROKEN_WORDS */
   {   34,   -1 }, /* (37) phrase ::= TERM */
-  {   34,   -1 }, /* (38) phrase ::= CJKTERM */
+  {   34,   -1 }, /* (38) phrase ::= UNBROKEN_WORDS */
   {   34,   -2 }, /* (39) phrase ::= phrase TERM */
-  {   34,   -2 }, /* (40) phrase ::= phrase CJKTERM */
+  {   34,   -2 }, /* (40) phrase ::= phrase UNBROKEN_WORDS */
   {   35,   -2 }, /* (41) phrased_term ::= TERM PHR_TERM */
   {   35,   -2 }, /* (42) phrased_term ::= phrased_term PHR_TERM */
   {   36,   -2 }, /* (43) group ::= TERM GROUP_TERM */
@@ -2131,8 +2159,9 @@ static void yy_reduce(
   (void)yyLookahead;
   (void)yyLookaheadToken;
   yymsp = &yypParser->yystack.back();
+  Assert( yyruleno<sizeof(yyRuleInfo)/sizeof(yyRuleInfo[0]) );
 #ifdef XAPIAN_DEBUG_LOG
-  if( yyruleno<(int)(sizeof(yyRuleName)/sizeof(yyRuleName[0])) ){
+  {
     yysize = yyRuleInfo[yyruleno].nrhs;
     if( yysize ){
       LOGLINE(QUERYPARSER, "Reduce " << yyruleno << " [" <<
@@ -2190,7 +2219,7 @@ static void yy_reduce(
 /********** Begin reduce actions **********************************************/
         YYMINORTYPE yylhsminor;
       case 0: /* query ::= expr */
-#line 1830 "queryparser/queryparser.lemony"
+#line 1862 "queryparser/queryparser.lemony"
 {
     // Save the parsed query in the State structure so we can return it.
     if (yymsp[0].minor.yy39) {
@@ -2200,28 +2229,28 @@ static void yy_reduce(
 	state->query = Query();
     }
 }
-#line 2204 "queryparser/queryparser_internal.cc"
+#line 2233 "queryparser/queryparser_internal.cc"
         break;
       case 1: /* query ::= */
-#line 1840 "queryparser/queryparser.lemony"
+#line 1872 "queryparser/queryparser.lemony"
 {
     // Handle a query string with no terms in.
     state->query = Query();
 }
-#line 2212 "queryparser/queryparser_internal.cc"
+#line 2241 "queryparser/queryparser_internal.cc"
         break;
       case 2: /* expr ::= bool_arg AND bool_arg */
-#line 1852 "queryparser/queryparser.lemony"
+#line 1884 "queryparser/queryparser.lemony"
 {
     VET_BOOL_ARGS(yymsp[-2].minor.yy39, yymsp[0].minor.yy39, "AND");
     *yymsp[-2].minor.yy39 &= *yymsp[0].minor.yy39;
     delete yymsp[0].minor.yy39;
 }
-#line 2221 "queryparser/queryparser_internal.cc"
+#line 2250 "queryparser/queryparser_internal.cc"
   yy_destructor(yypParser,4,&yymsp[-1].minor);
         break;
       case 3: /* expr ::= bool_arg NOT bool_arg */
-#line 1858 "queryparser/queryparser.lemony"
+#line 1890 "queryparser/queryparser.lemony"
 {
     // 'NOT foo' -> '<alldocuments> NOT foo'
     if (!yymsp[-2].minor.yy39 && (state->flags & QueryParser::FLAG_PURE_NOT)) {
@@ -2231,63 +2260,63 @@ static void yy_reduce(
     *yymsp[-2].minor.yy39 &= ~*yymsp[0].minor.yy39;
     delete yymsp[0].minor.yy39;
 }
-#line 2235 "queryparser/queryparser_internal.cc"
+#line 2264 "queryparser/queryparser_internal.cc"
   yy_destructor(yypParser,5,&yymsp[-1].minor);
         break;
       case 4: /* expr ::= bool_arg AND NOT bool_arg */
-#line 1868 "queryparser/queryparser.lemony"
+#line 1900 "queryparser/queryparser.lemony"
 {
     VET_BOOL_ARGS(yymsp[-3].minor.yy39, yymsp[0].minor.yy39, "AND NOT");
     *yymsp[-3].minor.yy39 &= ~*yymsp[0].minor.yy39;
     delete yymsp[0].minor.yy39;
 }
-#line 2245 "queryparser/queryparser_internal.cc"
+#line 2274 "queryparser/queryparser_internal.cc"
   yy_destructor(yypParser,4,&yymsp[-2].minor);
   yy_destructor(yypParser,5,&yymsp[-1].minor);
         break;
       case 5: /* expr ::= bool_arg AND HATE_AFTER_AND bool_arg */
-#line 1874 "queryparser/queryparser.lemony"
+#line 1906 "queryparser/queryparser.lemony"
 {
     VET_BOOL_ARGS(yymsp[-3].minor.yy39, yymsp[0].minor.yy39, "AND");
     *yymsp[-3].minor.yy39 &= ~*yymsp[0].minor.yy39;
     delete yymsp[0].minor.yy39;
 }
-#line 2256 "queryparser/queryparser_internal.cc"
+#line 2285 "queryparser/queryparser_internal.cc"
   yy_destructor(yypParser,4,&yymsp[-2].minor);
   yy_destructor(yypParser,10,&yymsp[-1].minor);
         break;
       case 6: /* expr ::= bool_arg OR bool_arg */
-#line 1880 "queryparser/queryparser.lemony"
+#line 1912 "queryparser/queryparser.lemony"
 {
     VET_BOOL_ARGS(yymsp[-2].minor.yy39, yymsp[0].minor.yy39, "OR");
     *yymsp[-2].minor.yy39 |= *yymsp[0].minor.yy39;
     delete yymsp[0].minor.yy39;
 }
-#line 2267 "queryparser/queryparser_internal.cc"
+#line 2296 "queryparser/queryparser_internal.cc"
   yy_destructor(yypParser,2,&yymsp[-1].minor);
         break;
       case 7: /* expr ::= bool_arg XOR bool_arg */
-#line 1886 "queryparser/queryparser.lemony"
+#line 1918 "queryparser/queryparser.lemony"
 {
     VET_BOOL_ARGS(yymsp[-2].minor.yy39, yymsp[0].minor.yy39, "XOR");
     *yymsp[-2].minor.yy39 ^= *yymsp[0].minor.yy39;
     delete yymsp[0].minor.yy39;
 }
-#line 2277 "queryparser/queryparser_internal.cc"
+#line 2306 "queryparser/queryparser_internal.cc"
   yy_destructor(yypParser,3,&yymsp[-1].minor);
         break;
       case 8: /* bool_arg ::= */
-#line 1899 "queryparser/queryparser.lemony"
+#line 1931 "queryparser/queryparser.lemony"
 {
     // Set the argument to NULL, which enables the bool_arg-using rules in
     // expr above to report uses of AND, OR, etc which don't have two
     // arguments.
     yymsp[1].minor.yy39 = NULL;
 }
-#line 2288 "queryparser/queryparser_internal.cc"
+#line 2317 "queryparser/queryparser_internal.cc"
         break;
       case 9: /* prob_expr ::= prob */
-#line 1911 "queryparser/queryparser.lemony"
+#line 1943 "queryparser/queryparser.lemony"
 {
     yylhsminor.yy39 = yymsp[0].minor.yy40->query;
     yymsp[0].minor.yy40->query = NULL;
@@ -2325,30 +2354,30 @@ static void yy_reduce(
     }
     delete yymsp[0].minor.yy40;
 }
-#line 2329 "queryparser/queryparser_internal.cc"
+#line 2358 "queryparser/queryparser_internal.cc"
   yymsp[0].minor.yy39 = yylhsminor.yy39;
         break;
       case 10: /* prob ::= RANGE */
-#line 1959 "queryparser/queryparser.lemony"
+#line 1991 "queryparser/queryparser.lemony"
 {
     string grouping = yymsp[0].minor.yy0->name;
     const Query & range = yymsp[0].minor.yy0->as_range_query();
     yymsp[0].minor.yy40 = new ProbQuery; /*P-overwrites-R*/
     yymsp[0].minor.yy40->add_filter_range(grouping, range);
 }
-#line 2340 "queryparser/queryparser_internal.cc"
+#line 2369 "queryparser/queryparser_internal.cc"
         break;
       case 11: /* prob ::= stop_prob RANGE */
-#line 1966 "queryparser/queryparser.lemony"
+#line 1998 "queryparser/queryparser.lemony"
 {
     string grouping = yymsp[0].minor.yy0->name;
     const Query & range = yymsp[0].minor.yy0->as_range_query();
     yymsp[-1].minor.yy40->append_filter_range(grouping, range);
 }
-#line 2349 "queryparser/queryparser_internal.cc"
+#line 2378 "queryparser/queryparser_internal.cc"
         break;
       case 12: /* prob ::= stop_term stop_term */
-#line 1972 "queryparser/queryparser.lemony"
+#line 2004 "queryparser/queryparser.lemony"
 {
     yymsp[-1].minor.yy40 = new ProbQuery(yymsp[-1].minor.yy39); /*P-overwrites-T*/
     if (yymsp[0].minor.yy39) {
@@ -2365,19 +2394,19 @@ static void yy_reduce(
 	}
     }
 }
-#line 2369 "queryparser/queryparser_internal.cc"
+#line 2398 "queryparser/queryparser_internal.cc"
         break;
       case 13: /* prob ::= prob stop_term */
-#line 1989 "queryparser/queryparser.lemony"
+#line 2021 "queryparser/queryparser.lemony"
 {
     // If yymsp[0].minor.yy39 is a stopword, there's nothing to do here.
     if (yymsp[0].minor.yy39) add_to_query(yymsp[-1].minor.yy40->query, state->default_op(), yymsp[0].minor.yy39);
 }
-#line 2377 "queryparser/queryparser_internal.cc"
+#line 2406 "queryparser/queryparser_internal.cc"
         break;
       case 14: /* prob ::= LOVE term */
 {  yy_destructor(yypParser,8,&yymsp[-1].minor);
-#line 1994 "queryparser/queryparser.lemony"
+#line 2026 "queryparser/queryparser.lemony"
 {
     yymsp[-1].minor.yy40 = new ProbQuery;
     if (state->default_op() == Query::OP_AND) {
@@ -2386,11 +2415,11 @@ static void yy_reduce(
 	yymsp[-1].minor.yy40->love = yymsp[0].minor.yy39;
     }
 }
-#line 2390 "queryparser/queryparser_internal.cc"
+#line 2419 "queryparser/queryparser_internal.cc"
 }
         break;
       case 15: /* prob ::= stop_prob LOVE term */
-#line 2003 "queryparser/queryparser.lemony"
+#line 2035 "queryparser/queryparser.lemony"
 {
     if (state->default_op() == Query::OP_AND) {
 	/* The default op is AND, so we just put loved terms into the query
@@ -2401,79 +2430,79 @@ static void yy_reduce(
 	add_to_query(yymsp[-2].minor.yy40->love, Query::OP_AND, yymsp[0].minor.yy39);
     }
 }
-#line 2405 "queryparser/queryparser_internal.cc"
+#line 2434 "queryparser/queryparser_internal.cc"
   yy_destructor(yypParser,8,&yymsp[-1].minor);
         break;
       case 16: /* prob ::= HATE term */
 {  yy_destructor(yypParser,9,&yymsp[-1].minor);
-#line 2014 "queryparser/queryparser.lemony"
+#line 2046 "queryparser/queryparser.lemony"
 {
     yymsp[-1].minor.yy40 = new ProbQuery;
     yymsp[-1].minor.yy40->hate = yymsp[0].minor.yy39;
 }
-#line 2415 "queryparser/queryparser_internal.cc"
+#line 2444 "queryparser/queryparser_internal.cc"
 }
         break;
       case 17: /* prob ::= stop_prob HATE term */
-#line 2019 "queryparser/queryparser.lemony"
+#line 2051 "queryparser/queryparser.lemony"
 {
     add_to_query(yymsp[-2].minor.yy40->hate, Query::OP_OR, yymsp[0].minor.yy39);
 }
-#line 2423 "queryparser/queryparser_internal.cc"
+#line 2452 "queryparser/queryparser_internal.cc"
   yy_destructor(yypParser,9,&yymsp[-1].minor);
         break;
       case 18: /* prob ::= HATE BOOLEAN_FILTER */
 {  yy_destructor(yypParser,9,&yymsp[-1].minor);
-#line 2023 "queryparser/queryparser.lemony"
+#line 2055 "queryparser/queryparser.lemony"
 {
     yymsp[-1].minor.yy40 = new ProbQuery;
     yymsp[-1].minor.yy40->hate = new Query(yymsp[0].minor.yy0->get_query());
     delete yymsp[0].minor.yy0;
 }
-#line 2434 "queryparser/queryparser_internal.cc"
+#line 2463 "queryparser/queryparser_internal.cc"
 }
         break;
       case 19: /* prob ::= stop_prob HATE BOOLEAN_FILTER */
-#line 2029 "queryparser/queryparser.lemony"
+#line 2061 "queryparser/queryparser.lemony"
 {
     add_to_query(yymsp[-2].minor.yy40->hate, Query::OP_OR, yymsp[0].minor.yy0->get_query());
     delete yymsp[0].minor.yy0;
 }
-#line 2443 "queryparser/queryparser_internal.cc"
+#line 2472 "queryparser/queryparser_internal.cc"
   yy_destructor(yypParser,9,&yymsp[-1].minor);
         break;
       case 20: /* prob ::= BOOLEAN_FILTER */
-#line 2034 "queryparser/queryparser.lemony"
+#line 2066 "queryparser/queryparser.lemony"
 {
     yylhsminor.yy40 = new ProbQuery;
     yylhsminor.yy40->add_filter(yymsp[0].minor.yy0->get_grouping(), yymsp[0].minor.yy0->get_query());
     delete yymsp[0].minor.yy0;
 }
-#line 2453 "queryparser/queryparser_internal.cc"
+#line 2482 "queryparser/queryparser_internal.cc"
   yymsp[0].minor.yy40 = yylhsminor.yy40;
         break;
       case 21: /* prob ::= stop_prob BOOLEAN_FILTER */
-#line 2040 "queryparser/queryparser.lemony"
+#line 2072 "queryparser/queryparser.lemony"
 {
     yymsp[-1].minor.yy40->append_filter(yymsp[0].minor.yy0->get_grouping(), yymsp[0].minor.yy0->get_query());
     delete yymsp[0].minor.yy0;
 }
-#line 2462 "queryparser/queryparser_internal.cc"
+#line 2491 "queryparser/queryparser_internal.cc"
         break;
       case 22: /* prob ::= LOVE BOOLEAN_FILTER */
 {  yy_destructor(yypParser,8,&yymsp[-1].minor);
-#line 2045 "queryparser/queryparser.lemony"
+#line 2077 "queryparser/queryparser.lemony"
 {
     // LOVE BOOLEAN_FILTER(yymsp[0].minor.yy0) is just the same as BOOLEAN_FILTER
     yymsp[-1].minor.yy40 = new ProbQuery;
     yymsp[-1].minor.yy40->filter[yymsp[0].minor.yy0->get_grouping()] = yymsp[0].minor.yy0->get_query();
     delete yymsp[0].minor.yy0;
 }
-#line 2473 "queryparser/queryparser_internal.cc"
+#line 2502 "queryparser/queryparser_internal.cc"
 }
         break;
       case 23: /* prob ::= stop_prob LOVE BOOLEAN_FILTER */
-#line 2052 "queryparser/queryparser.lemony"
+#line 2084 "queryparser/queryparser.lemony"
 {
     // LOVE BOOLEAN_FILTER(yymsp[0].minor.yy0) is just the same as BOOLEAN_FILTER
     // We OR filters with the same prefix...
@@ -2481,18 +2510,18 @@ static void yy_reduce(
     q |= yymsp[0].minor.yy0->get_query();
     delete yymsp[0].minor.yy0;
 }
-#line 2485 "queryparser/queryparser_internal.cc"
+#line 2514 "queryparser/queryparser_internal.cc"
   yy_destructor(yypParser,8,&yymsp[-1].minor);
         break;
       case 24: /* stop_prob ::= stop_term */
-#line 2067 "queryparser/queryparser.lemony"
+#line 2099 "queryparser/queryparser.lemony"
 {
     yymsp[0].minor.yy40 = new ProbQuery(yymsp[0].minor.yy39); /*P-overwrites-T*/
 }
-#line 2493 "queryparser/queryparser_internal.cc"
+#line 2522 "queryparser/queryparser_internal.cc"
         break;
       case 25: /* stop_term ::= TERM */
-#line 2080 "queryparser/queryparser.lemony"
+#line 2112 "queryparser/queryparser.lemony"
 {
     if (state->is_stopword(yymsp[0].minor.yy0)) {
 	yylhsminor.yy39 = NULL;
@@ -2502,151 +2531,151 @@ static void yy_reduce(
     }
     delete yymsp[0].minor.yy0;
 }
-#line 2506 "queryparser/queryparser_internal.cc"
+#line 2535 "queryparser/queryparser_internal.cc"
   yymsp[0].minor.yy39 = yylhsminor.yy39;
         break;
       case 26: /* term ::= TERM */
-#line 2097 "queryparser/queryparser.lemony"
+#line 2129 "queryparser/queryparser.lemony"
 {
     yylhsminor.yy39 = new Query(yymsp[0].minor.yy0->get_query_with_auto_synonyms());
     delete yymsp[0].minor.yy0;
 }
-#line 2515 "queryparser/queryparser_internal.cc"
+#line 2544 "queryparser/queryparser_internal.cc"
   yymsp[0].minor.yy39 = yylhsminor.yy39;
         break;
       case 27: /* compound_term ::= WILD_TERM */
-#line 2112 "queryparser/queryparser.lemony"
+#line 2144 "queryparser/queryparser.lemony"
 { yymsp[0].minor.yy39 = yymsp[0].minor.yy0->as_wildcarded_query(state); /*T-overwrites-U*/ }
-#line 2521 "queryparser/queryparser_internal.cc"
+#line 2550 "queryparser/queryparser_internal.cc"
         break;
       case 28: /* compound_term ::= PARTIAL_TERM */
-#line 2115 "queryparser/queryparser.lemony"
+#line 2147 "queryparser/queryparser.lemony"
 { yymsp[0].minor.yy39 = yymsp[0].minor.yy0->as_partial_query(state); /*T-overwrites-U*/ }
-#line 2526 "queryparser/queryparser_internal.cc"
+#line 2555 "queryparser/queryparser_internal.cc"
         break;
       case 29: /* compound_term ::= QUOTE phrase QUOTE */
 {  yy_destructor(yypParser,19,&yymsp[-2].minor);
-#line 2118 "queryparser/queryparser.lemony"
+#line 2150 "queryparser/queryparser.lemony"
 { yymsp[-2].minor.yy39 = yymsp[-1].minor.yy32->as_phrase_query(); }
-#line 2532 "queryparser/queryparser_internal.cc"
+#line 2561 "queryparser/queryparser_internal.cc"
   yy_destructor(yypParser,19,&yymsp[0].minor);
 }
         break;
       case 30: /* compound_term ::= phrased_term */
-#line 2121 "queryparser/queryparser.lemony"
+#line 2153 "queryparser/queryparser.lemony"
 { yymsp[0].minor.yy39 = yymsp[0].minor.yy32->as_phrase_query(); /*T-overwrites-P*/ }
-#line 2539 "queryparser/queryparser_internal.cc"
+#line 2568 "queryparser/queryparser_internal.cc"
         break;
       case 31: /* compound_term ::= group */
-#line 2124 "queryparser/queryparser.lemony"
+#line 2156 "queryparser/queryparser.lemony"
 { yymsp[0].minor.yy39 = yymsp[0].minor.yy14->as_group(state); /*T-overwrites-P*/ }
-#line 2544 "queryparser/queryparser_internal.cc"
+#line 2573 "queryparser/queryparser_internal.cc"
         break;
       case 32: /* compound_term ::= near_expr */
-#line 2127 "queryparser/queryparser.lemony"
+#line 2159 "queryparser/queryparser.lemony"
 { yymsp[0].minor.yy39 = yymsp[0].minor.yy32->as_near_query(); /*T-overwrites-P*/ }
-#line 2549 "queryparser/queryparser_internal.cc"
+#line 2578 "queryparser/queryparser_internal.cc"
         break;
       case 33: /* compound_term ::= adj_expr */
-#line 2130 "queryparser/queryparser.lemony"
+#line 2162 "queryparser/queryparser.lemony"
 { yymsp[0].minor.yy39 = yymsp[0].minor.yy32->as_adj_query(); /*T-overwrites-P*/ }
-#line 2554 "queryparser/queryparser_internal.cc"
+#line 2583 "queryparser/queryparser_internal.cc"
         break;
       case 34: /* compound_term ::= BRA expr KET */
 {  yy_destructor(yypParser,20,&yymsp[-2].minor);
-#line 2133 "queryparser/queryparser.lemony"
+#line 2165 "queryparser/queryparser.lemony"
 { yymsp[-2].minor.yy39 = yymsp[-1].minor.yy39; }
-#line 2560 "queryparser/queryparser_internal.cc"
+#line 2589 "queryparser/queryparser_internal.cc"
   yy_destructor(yypParser,21,&yymsp[0].minor);
 }
         break;
       case 35: /* compound_term ::= SYNONYM TERM */
 {  yy_destructor(yypParser,11,&yymsp[-1].minor);
-#line 2135 "queryparser/queryparser.lemony"
+#line 2167 "queryparser/queryparser.lemony"
 {
     yymsp[-1].minor.yy39 = new Query(yymsp[0].minor.yy0->get_query_with_synonyms());
     delete yymsp[0].minor.yy0;
 }
-#line 2571 "queryparser/queryparser_internal.cc"
+#line 2600 "queryparser/queryparser_internal.cc"
 }
         break;
-      case 36: /* compound_term ::= CJKTERM */
-#line 2140 "queryparser/queryparser.lemony"
+      case 36: /* compound_term ::= UNBROKEN_WORDS */
+#line 2172 "queryparser/queryparser.lemony"
 {
-    { yymsp[0].minor.yy39 = yymsp[0].minor.yy0->as_cjk_query(); /*T-overwrites-U*/ }
+    { yymsp[0].minor.yy39 = yymsp[0].minor.yy0->as_unbroken_query(); /*T-overwrites-U*/ }
 }
-#line 2579 "queryparser/queryparser_internal.cc"
+#line 2608 "queryparser/queryparser_internal.cc"
         break;
       case 37: /* phrase ::= TERM */
-#line 2150 "queryparser/queryparser.lemony"
+#line 2182 "queryparser/queryparser.lemony"
 {
-    yylhsminor.yy32 = Terms::create();
+    yylhsminor.yy32 = Terms::create(state);
     yylhsminor.yy32->add_positional_term(yymsp[0].minor.yy0);
 }
-#line 2587 "queryparser/queryparser_internal.cc"
+#line 2616 "queryparser/queryparser_internal.cc"
   yymsp[0].minor.yy32 = yylhsminor.yy32;
         break;
-      case 38: /* phrase ::= CJKTERM */
-#line 2155 "queryparser/queryparser.lemony"
+      case 38: /* phrase ::= UNBROKEN_WORDS */
+#line 2187 "queryparser/queryparser.lemony"
 {
-    yylhsminor.yy32 = Terms::create();
-    yymsp[0].minor.yy0->as_positional_cjk_term(yylhsminor.yy32);
+    yylhsminor.yy32 = Terms::create(state);
+    yymsp[0].minor.yy0->as_positional_unbroken(yylhsminor.yy32);
 }
-#line 2596 "queryparser/queryparser_internal.cc"
+#line 2625 "queryparser/queryparser_internal.cc"
   yymsp[0].minor.yy32 = yylhsminor.yy32;
         break;
       case 39: /* phrase ::= phrase TERM */
       case 42: /* phrased_term ::= phrased_term PHR_TERM */ yytestcase(yyruleno==42);
-#line 2160 "queryparser/queryparser.lemony"
+#line 2192 "queryparser/queryparser.lemony"
 {
     yymsp[-1].minor.yy32->add_positional_term(yymsp[0].minor.yy0);
 }
-#line 2605 "queryparser/queryparser_internal.cc"
+#line 2634 "queryparser/queryparser_internal.cc"
         break;
-      case 40: /* phrase ::= phrase CJKTERM */
-#line 2164 "queryparser/queryparser.lemony"
+      case 40: /* phrase ::= phrase UNBROKEN_WORDS */
+#line 2196 "queryparser/queryparser.lemony"
 {
-    yymsp[0].minor.yy0->as_positional_cjk_term(yymsp[-1].minor.yy32);
+    yymsp[0].minor.yy0->as_positional_unbroken(yymsp[-1].minor.yy32);
 }
-#line 2612 "queryparser/queryparser_internal.cc"
+#line 2641 "queryparser/queryparser_internal.cc"
         break;
       case 41: /* phrased_term ::= TERM PHR_TERM */
-#line 2175 "queryparser/queryparser.lemony"
+#line 2207 "queryparser/queryparser.lemony"
 {
-    yylhsminor.yy32 = Terms::create();
+    yylhsminor.yy32 = Terms::create(state);
     yylhsminor.yy32->add_positional_term(yymsp[-1].minor.yy0);
     yylhsminor.yy32->add_positional_term(yymsp[0].minor.yy0);
 }
-#line 2621 "queryparser/queryparser_internal.cc"
+#line 2650 "queryparser/queryparser_internal.cc"
   yymsp[-1].minor.yy32 = yylhsminor.yy32;
         break;
       case 43: /* group ::= TERM GROUP_TERM */
-#line 2191 "queryparser/queryparser.lemony"
+#line 2223 "queryparser/queryparser.lemony"
 {
     yymsp[-1].minor.yy14 = TermGroup::create(yymsp[-1].minor.yy0, yymsp[0].minor.yy0); /*P-overwrites-T*/
 }
-#line 2629 "queryparser/queryparser_internal.cc"
+#line 2658 "queryparser/queryparser_internal.cc"
         break;
       case 44: /* group ::= group GROUP_TERM */
-#line 2195 "queryparser/queryparser.lemony"
+#line 2227 "queryparser/queryparser.lemony"
 {
     yymsp[-1].minor.yy14->add_term(yymsp[0].minor.yy0);
 }
-#line 2636 "queryparser/queryparser_internal.cc"
+#line 2665 "queryparser/queryparser_internal.cc"
         break;
       case 45: /* group ::= group EMPTY_GROUP_OK */
-#line 2199 "queryparser/queryparser.lemony"
+#line 2231 "queryparser/queryparser.lemony"
 {
     yymsp[-1].minor.yy14->set_empty_ok();
 }
-#line 2643 "queryparser/queryparser_internal.cc"
+#line 2672 "queryparser/queryparser_internal.cc"
   yy_destructor(yypParser,23,&yymsp[0].minor);
         break;
       case 46: /* near_expr ::= TERM NEAR TERM */
       case 48: /* adj_expr ::= TERM ADJ TERM */ yytestcase(yyruleno==48);
-#line 2209 "queryparser/queryparser.lemony"
+#line 2241 "queryparser/queryparser.lemony"
 {
-    yylhsminor.yy32 = Terms::create();
+    yylhsminor.yy32 = Terms::create(state);
     yylhsminor.yy32->add_positional_term(yymsp[-2].minor.yy0);
     yylhsminor.yy32->add_positional_term(yymsp[0].minor.yy0);
     if (yymsp[-1].minor.yy0) {
@@ -2654,12 +2683,12 @@ static void yy_reduce(
 	delete yymsp[-1].minor.yy0;
     }
 }
-#line 2658 "queryparser/queryparser_internal.cc"
+#line 2687 "queryparser/queryparser_internal.cc"
   yymsp[-2].minor.yy32 = yylhsminor.yy32;
         break;
       case 47: /* near_expr ::= near_expr NEAR TERM */
       case 49: /* adj_expr ::= adj_expr ADJ TERM */ yytestcase(yyruleno==49);
-#line 2219 "queryparser/queryparser.lemony"
+#line 2251 "queryparser/queryparser.lemony"
 {
     yymsp[-2].minor.yy32->add_positional_term(yymsp[0].minor.yy0);
     if (yymsp[-1].minor.yy0) {
@@ -2667,7 +2696,7 @@ static void yy_reduce(
 	delete yymsp[-1].minor.yy0;
     }
 }
-#line 2671 "queryparser/queryparser_internal.cc"
+#line 2700 "queryparser/queryparser_internal.cc"
         break;
       default:
       /* (50) expr ::= prob_expr (OPTIMIZED OUT) */ Assert(yyruleno!=50);
@@ -2713,11 +2742,11 @@ static void yy_parse_failed(
   /* Here code is inserted which will be executed whenever the
   ** parser fails */
 /************ Begin %parse_failure code ***************************************/
-#line 1777 "queryparser/queryparser.lemony"
+#line 1809 "queryparser/queryparser.lemony"
 
     // If we've not already set an error message, set a default one.
     if (!state->error) state->error = "parse error";
-#line 2721 "queryparser/queryparser_internal.cc"
+#line 2750 "queryparser/queryparser_internal.cc"
 /************ End %parse_failure code *****************************************/
   ParseARG_STORE; /* Suppress warning about unused %extra_argument variable */
 }
@@ -2736,10 +2765,10 @@ static void yy_syntax_error(
   (void)yyminor;
 #define TOKEN yyminor
 /************ Begin %syntax_error code ****************************************/
-#line 1782 "queryparser/queryparser.lemony"
+#line 1814 "queryparser/queryparser.lemony"
 
     yy_parse_failed(yypParser);
-#line 2743 "queryparser/queryparser_internal.cc"
+#line 2772 "queryparser/queryparser_internal.cc"
 /************ End %syntax_error code ******************************************/
   ParseARG_STORE; /* Suppress warning about unused %extra_argument variable */
 }
@@ -2938,14 +2967,14 @@ void Parse(
 }
 
 // Select C++ syntax highlighting in vim editor: vim: syntax=cpp
-#line 789 "queryparser/queryparser.lemony"
+#line 799 "queryparser/queryparser.lemony"
 
 
 Query
 QueryParser::Internal::parse_query(const string &qs, unsigned flags,
 				   const string &default_prefix)
 {
-    bool cjk_ngram = (flags & FLAG_CJK_NGRAM) || CJK::is_cjk_enabled();
+    bool try_word_break = (flags & FLAG_NGRAMS) || is_ngram_enabled();
 
     // Set ranges if we may have to handle ranges in the query.
     bool ranges = !rangeprocs.empty() && (qs.find("..") != string::npos);
@@ -3012,7 +3041,7 @@ just_had_operator_needing_term:
 	if (ranges &&
 	    (mode == DEFAULT || mode == IN_GROUP || mode == IN_GROUP2)) {
 	    // Scan forward to see if this could be the "start of range"
-	    // token.  Sadly this has O(n^2) tendencies, though at least
+	    // token.  Sadly this has O(n²) tendencies, though at least
 	    // "n" is the number of words in a query which is likely to
 	    // remain fairly small.  FIXME: can we tokenise more elegantly?
 	    Utf8Iterator it_initial = it;
@@ -3304,8 +3333,9 @@ not_prefix:
 
 phrased_term:
 	bool was_acronym;
-	bool is_cjk_term = false;
-	string term = parse_term(it, end, cjk_ngram, is_cjk_term, was_acronym);
+	bool needs_word_break = false;
+	string term = parse_term(it, end, try_word_break,
+                                 needs_word_break, was_acronym);
 
 	if ((mode == DEFAULT || mode == IN_GROUP || mode == IN_GROUP2) &&
 	    (flags & FLAG_BOOLEAN) &&
@@ -3404,8 +3434,11 @@ phrased_term:
 	    Term * term_obj = new Term(&state, term, field_info,
 				       unstemmed_term, stem_term, term_pos++);
 
-	    if (is_cjk_term) {
-		Parse(&parser, CJKTERM, term_obj, &state);
+	    if (needs_word_break) {
+		Parse(&parser, UNBROKEN_WORDS, term_obj, &state);
+		// Drop out of IN_GROUP mode.
+		if (mode == IN_GROUP || mode == IN_GROUP2)
+		    mode = DEFAULT;
 		if (it == end) break;
 		continue;
 	    }
@@ -3551,4 +3584,4 @@ done:
     return state.query;
 }
 
-#line 3555 "queryparser/queryparser_internal.cc"
+#line 3588 "queryparser/queryparser_internal.cc"

@@ -67,11 +67,12 @@ DEFINE_TESTCASE(qpsynonympartial1, synonyms) {
 	{ NULL, NULL }
     };
 
-    Xapian::WritableDatabase db(get_writable_database());
-    db.add_synonym("hello", "hi");
-    db.add_synonym("hello", "howdy");
-    db.commit();
-
+    Xapian::Database db = get_database("qpsynonympartial1",
+				       [](Xapian::WritableDatabase& wdb,
+					  const string&) {
+					   wdb.add_synonym("hello", "hi");
+					   wdb.add_synonym("hello", "howdy");
+				       });
     Xapian::Enquire enquire(db);
     Xapian::QueryParser qp;
     Xapian::Stem stemmmer("english");

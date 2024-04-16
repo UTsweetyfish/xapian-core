@@ -3,7 +3,7 @@
  */
 /* Copyright 1999,2000,2001 BrightStation PLC
  * Copyright 2002 Ananova Ltd
- * Copyright 2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2014,2017 Olly Betts
+ * Copyright 2002-2023 Olly Betts
  * Copyright 2006,2009 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or
@@ -79,7 +79,7 @@ InMemoryDoc::add_posting(const InMemoryTermEntry & post)
 // Postlist //
 //////////////
 
-InMemoryPostList::InMemoryPostList(intrusive_ptr<const InMemoryDatabase> db_,
+InMemoryPostList::InMemoryPostList(const InMemoryDatabase* db_,
 				   const InMemoryTerm & imterm,
 				   const std::string & term_)
 	: LeafPostList(term_),
@@ -87,9 +87,14 @@ InMemoryPostList::InMemoryPostList(intrusive_ptr<const InMemoryDatabase> db_,
 	  end(imterm.docs.end()),
 	  termfreq(imterm.term_freq),
 	  started(false),
-	  db(db_)
+	  db(db_),
+	  wdf_upper_bound(0)
 {
     while (pos != end && !pos->valid) ++pos;
+    if (pos != end) {
+	auto first_wdf = (*pos).wdf;
+	wdf_upper_bound = max(first_wdf, imterm.collection_freq - first_wdf);
+    }
 }
 
 Xapian::doccount
@@ -187,6 +192,13 @@ InMemoryPostList::get_wdf() const
 {
     if (db->is_closed()) InMemoryDatabase::throw_database_closed();
     return (*pos).wdf;
+}
+
+Xapian::termcount
+InMemoryPostList::get_wdf_upper_bound() const
+{
+    if (db->is_closed()) InMemoryDatabase::throw_database_closed();
+    return wdf_upper_bound;
 }
 
 //////////////
@@ -306,7 +318,7 @@ InMemoryTermList::positionlist_begin() const
 // InMemoryAllDocsPostList //
 /////////////////////////////
 
-InMemoryAllDocsPostList::InMemoryAllDocsPostList(intrusive_ptr<const InMemoryDatabase> db_)
+InMemoryAllDocsPostList::InMemoryAllDocsPostList(const InMemoryDatabase* db_)
 	: LeafPostList(std::string()), did(0), db(db_)
 {
 }
@@ -391,6 +403,12 @@ InMemoryAllDocsPostList::at_end() const
     return (did > db->termlists.size());
 }
 
+Xapian::termcount
+InMemoryAllDocsPostList::get_wdf_upper_bound() const
+{
+    return 1;
+}
+
 string
 InMemoryAllDocsPostList::get_description() const
 {
@@ -443,8 +461,7 @@ InMemoryDatabase::open_post_list(const string & tname) const
 {
     if (closed) InMemoryDatabase::throw_database_closed();
     if (tname.empty()) {
-	intrusive_ptr<const InMemoryDatabase> ptrtothis(this);
-	return new InMemoryAllDocsPostList(ptrtothis);
+	return new InMemoryAllDocsPostList(this);
     }
     map<string, InMemoryTerm>::const_iterator i = postlists.find(tname);
     if (i == postlists.end() || i->second.term_freq == 0) {
@@ -452,8 +469,7 @@ InMemoryDatabase::open_post_list(const string & tname) const
 	// Check that our dummy entry for string() is present.
 	Assert(i->first.empty());
     }
-    intrusive_ptr<const InMemoryDatabase> ptrtothis(this);
-    return new InMemoryPostList(ptrtothis, i->second, tname);
+    return new InMemoryPostList(this, i->second, tname);
 }
 
 bool
@@ -521,7 +537,7 @@ Xapian::docid
 InMemoryDatabase::get_lastdocid() const
 {
     if (closed) InMemoryDatabase::throw_database_closed();
-    return termlists.size();
+    return Xapian::docid(termlists.size());
 }
 
 Xapian::totallength
@@ -871,13 +887,17 @@ InMemoryDatabase::make_term(const string & tname)
 Xapian::docid
 InMemoryDatabase::make_doc(const string & docdata)
 {
+    if (rare(termlists.size() == Xapian::docid(-1))) {
+	// Really unlikely to actually happen for inmemory.
+	throw Xapian::DatabaseError("Run out of docids");
+    }
     termlists.push_back(InMemoryDoc(true));
     doclengths.push_back(0);
     doclists.push_back(docdata);
 
     AssertEqParanoid(termlists.size(), doclengths.size());
 
-    return termlists.size();
+    return Xapian::docid(termlists.size());
 }
 
 void InMemoryDatabase::make_posting(InMemoryDoc * doc,

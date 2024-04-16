@@ -1,20 +1,20 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.16: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.20.1: https://docutils.sourceforge.io/" />
 <title>Geospatial searching with Xapian</title>
 <style type="text/css">
 
 /*
 :Author: David Goodger (goodger@python.org)
-:Id: $Id: html4css1.css 7952 2016-07-26 18:15:59Z milde $
+:Id: $Id: html4css1.css 8954 2022-01-20 10:10:25Z milde $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
 
-See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+See https://docutils.sourceforge.io/docs/howto/html-stylesheets.html for how to
 customize this style sheet.
 */
 
@@ -367,21 +367,21 @@ ul.auto-toc {
 <div class="contents topic" id="table-of-contents">
 <p class="topic-title">Table of contents</p>
 <ul class="simple">
-<li><a class="reference internal" href="#introduction" id="id1">Introduction</a></li>
-<li><a class="reference internal" href="#metrics" id="id2">Metrics</a></li>
-<li><a class="reference internal" href="#indexing" id="id3">Indexing</a></li>
-<li><a class="reference internal" href="#searching" id="id4">Searching</a><ul>
-<li><a class="reference internal" href="#sorting-results-by-distance" id="id5">Sorting results by distance</a></li>
-<li><a class="reference internal" href="#filtering-results-by-distance" id="id6">Filtering results by distance</a></li>
-<li><a class="reference internal" href="#ranking-results-on-a-combination-of-distance-and-relevance" id="id7">Ranking results on a combination of distance and relevance</a></li>
+<li><a class="reference internal" href="#introduction" id="toc-entry-1">Introduction</a></li>
+<li><a class="reference internal" href="#metrics" id="toc-entry-2">Metrics</a></li>
+<li><a class="reference internal" href="#indexing" id="toc-entry-3">Indexing</a></li>
+<li><a class="reference internal" href="#searching" id="toc-entry-4">Searching</a><ul>
+<li><a class="reference internal" href="#sorting-results-by-distance" id="toc-entry-5">Sorting results by distance</a></li>
+<li><a class="reference internal" href="#filtering-results-by-distance" id="toc-entry-6">Filtering results by distance</a></li>
+<li><a class="reference internal" href="#ranking-results-on-a-combination-of-distance-and-relevance" id="toc-entry-7">Ranking results on a combination of distance and relevance</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#performance" id="id8">Performance</a></li>
-<li><a class="reference internal" href="#references" id="id9">References</a></li>
+<li><a class="reference internal" href="#performance" id="toc-entry-8">Performance</a></li>
+<li><a class="reference internal" href="#references" id="toc-entry-9">References</a></li>
 </ul>
 </div>
 <div class="section" id="introduction">
-<h1><a class="toc-backref" href="#id1">Introduction</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-1">Introduction</a></h1>
 <p>This document describes a set of features present in Xapian which are designed
 to allow geospatial searches to be supported.  Currently, the geospatial
 support allows sets of locations to be stored associated with each document, as
@@ -405,7 +405,7 @@ coordinates in a single value slot, in which case the closest coordinate will
 be used for distance calculations.</p>
 </div>
 <div class="section" id="metrics">
-<h1><a class="toc-backref" href="#id2">Metrics</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-2">Metrics</a></h1>
 <p>A metric is a function which calculates the distance between two points.</p>
 <p>Calculating the exact distance between two geographical points is an involved
 subject.  In fact, even defining the meaning of a geographical point is very
@@ -436,7 +436,7 @@ the other hand, such points are likely to be at the end of a ranked list of
 search results, so this probably doesn't matter.</p>
 </div>
 <div class="section" id="indexing">
-<h1><a class="toc-backref" href="#id3">Indexing</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-3">Indexing</a></h1>
 <p>To index a set of documents with location, you need to store serialised
 latitude-longitude coordinates in a value slot in your documents.  To do this,
 use the LatLongCoord class.  For example, this is how you might store a
@@ -467,9 +467,9 @@ coordinate is exactly the same as the serialised form of the corresponding
 LatLongCoord object.)</p>
 </div>
 <div class="section" id="searching">
-<h1><a class="toc-backref" href="#id4">Searching</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-4">Searching</a></h1>
 <div class="section" id="sorting-results-by-distance">
-<h2><a class="toc-backref" href="#id5">Sorting results by distance</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-5">Sorting results by distance</a></h2>
 <p>If you simply want your results to be returned in order of distance, you can
 use the LatLongDistanceKeyMaker class to calculate sort keys.  For example, to
 return results in order of distance from the coordinate (51.00, 0.50), based on
@@ -485,7 +485,7 @@ enq.set_sort_by_key(keymaker, False);
 </pre>
 </div>
 <div class="section" id="filtering-results-by-distance">
-<h2><a class="toc-backref" href="#id6">Filtering results by distance</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-6">Filtering results by distance</a></h2>
 <p>To return only those results within a given distance, you can use the
 LatLongDistancePostingSource.  For example, to return only those results within
 5 miles of coordinate (51.00, 0.50), based on the values stored in slot 0, and
@@ -503,7 +503,7 @@ enq.set_query(q);
 </pre>
 </div>
 <div class="section" id="ranking-results-on-a-combination-of-distance-and-relevance">
-<h2><a class="toc-backref" href="#id7">Ranking results on a combination of distance and relevance</a></h2>
+<h2><a class="toc-backref" href="#toc-entry-7">Ranking results on a combination of distance and relevance</a></h2>
 <p>To return results ranked by a combination of their relevance and their
 distance, you can also use the LatLongDistancePostingSource.  Beware that
 getting the right balance of weights is tricky: there is little solid
@@ -528,7 +528,7 @@ enq.set_query(q);
 </div>
 </div>
 <div class="section" id="performance">
-<h1><a class="toc-backref" href="#id8">Performance</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-8">Performance</a></h1>
 <p>The location information associated with each document is stored in a document
 value.  This allows it to be looked up quickly at search time, so that the
 exact distance from the query location can be calculated.  However, this method
@@ -558,7 +558,7 @@ Additionally, by simply generating special terms to restrict the search, the
 existing optimisations of the Xapian query parser are taken advantage of.</p>
 </div>
 <div class="section" id="references">
-<h1><a class="toc-backref" href="#id9">References</a></h1>
+<h1><a class="toc-backref" href="#toc-entry-9">References</a></h1>
 <p>The following may be of interest.</p>
 <p>The O-QTM algorithm is described in &quot;Dutton, G. (1996). Encoding and handling
 geospatial data with hierarchical triangular meshes. In Kraak, M.J. and

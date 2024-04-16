@@ -64,7 +64,7 @@ DPHWeight::init(double factor)
     double min_wdf_to_len = wdf_lower / len_upper;
 
     /* Calculate constant value to be used in get_sumpart(). */
-    log_constant = get_total_length() / F;
+    log_constant = log2(get_total_length() / F);
     wqf_product_factor = get_wqf() * factor;
 
     // Calculate the upper bound on the weight.
@@ -86,11 +86,11 @@ DPHWeight::init(double factor)
 			 (wdf + 1.0). */
     /* Now, assuming len to be len_upper for the purpose of maximization,
        (d)/(dx) (x * (1 - x / c) * (1 - x / c)) / (x+1) =
-       ((c - x) * (c - x * (2 * x + 3))) / (c ^ 2 * (x + 1) ^ 2)
+       ((c - x) * (c - x * (2 * x + 3))) / (c² * (x + 1)²)
        Thus, if (c - x * (2 * x + 3)) is positive, the differentiation
        value will be positive and hence the function will be an
        increasing function. By finding the positive root of the equation
-       2 * x ^ 2 + 3 * x - c = 0, we get the value of x(wdf)
+       2 * x² + 3 * x - c = 0, we get the value of x(wdf)
        at which the differentiation value turns to negative from positive,
        and hence, the function will have maximum value for that value of wdf. */
     double wdf_root = 0.25 * (sqrt(8.0 * len_upper + 9.0) - 3.0);
@@ -102,11 +102,12 @@ DPHWeight::init(double factor)
 	wdf_root = wdf_lower;
     }
 
-    double max_wdf_product_normalization = wdf_root / (wdf_root + 1) *
-	pow((1 - wdf_root / len_upper), 2.0);
+    double x = 1 - wdf_root / len_upper;
+    double x_squared = x * x;
+    auto max_wdf_product_normalization = wdf_root / (wdf_root + 1) * x_squared;
 
     double max_weight = max_wdf_product_normalization *
-	(log2(log_constant) + (0.5 * log2(2 * M_PI * max_product)));
+	(log_constant + (0.5 * log2(2 * M_PI * max_product)));
 
     upper_bound = wqf_product_factor * max_weight;
     if (rare(upper_bound < 0.0)) upper_bound = 0.0;
@@ -140,10 +141,11 @@ DPHWeight::get_sumpart(Xapian::termcount wdf, Xapian::termcount len,
 
     double wdf_to_len = double(wdf) / len;
 
-    double normalization = pow((1 - wdf_to_len), 2) / (wdf + 1);
+    double x = 1 - wdf_to_len;
+    double normalization = x * x / (wdf + 1);
 
     double wt = normalization *
-	(wdf * log2(wdf_to_len * log_constant) +
+	(wdf * (log2(wdf_to_len) + log_constant) +
 	 (0.5 * log2(2 * M_PI * wdf * (1 - wdf_to_len))));
     if (rare(wt <= 0.0)) return 0.0;
 

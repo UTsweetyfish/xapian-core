@@ -2,7 +2,7 @@
  * @brief Run multiple tests for different backends.
  */
 /* Copyright 2008,2009 Lemur Consulting Ltd
- * Copyright 2008,2009,2010,2011,2015,2017,2018,2019 Olly Betts
+ * Copyright 2008,2009,2010,2011,2015,2017,2018,2019,2023 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -68,45 +68,45 @@ TestRunner::set_properties_for_backend(const string & backend_name)
     static const BackendProperties backend_properties[] = {
 	{ "none", 0 },
 	{ "inmemory", INMEMORY|
-	    BACKEND|POSITIONAL|WRITABLE|METADATA|VALUESTATS|GENERATED },
+	    BACKEND|POSITIONAL|WRITABLE|METADATA|VALUESTATS },
 	{ "chert", CHERT|
 	    BACKEND|TRANSACTIONS|POSITIONAL|WRITABLE|SPELLING|METADATA|
-	    SYNONYMS|VALUESTATS|GENERATED|COMPACT|PATH
+	    SYNONYMS|VALUESTATS|CHECK|COMPACT|PATH
 #ifdef XAPIAN_HAS_REMOTE_BACKEND
 	    |REPLICAS
 #endif
 	},
 	{ "glass", GLASS|
 	    BACKEND|TRANSACTIONS|POSITIONAL|WRITABLE|SPELLING|METADATA|
-	    SYNONYMS|VALUESTATS|GENERATED|COMPACT|PATH
+	    SYNONYMS|VALUESTATS|CHECK|COMPACT|PATH
 #ifdef XAPIAN_HAS_REMOTE_BACKEND
 	    |REPLICAS
 #endif
 	},
 	{ "multi_chert", MULTI|
-	    BACKEND|POSITIONAL|WRITABLE|METADATA|
-	    SYNONYMS|VALUESTATS|PATH },
+	    BACKEND|TRANSACTIONS|POSITIONAL|WRITABLE|METADATA|VALUESTATS|
+	    PATH },
 	{ "multi_glass", MULTI|
-	    BACKEND|POSITIONAL|WRITABLE|METADATA|
-	    SYNONYMS|VALUESTATS|GENERATED|COMPACT|PATH },
+	    BACKEND|TRANSACTIONS|POSITIONAL|WRITABLE|METADATA|VALUESTATS|
+	    SPELLING|CHECK|COMPACT|PATH },
 	{ "remoteprog_chert", REMOTE|
 	    BACKEND|TRANSACTIONS|POSITIONAL|WRITABLE|METADATA|VALUESTATS },
 	{ "remotetcp_chert", REMOTE|
 	    BACKEND|TRANSACTIONS|POSITIONAL|WRITABLE|METADATA|VALUESTATS },
-	{ "multi_glass_remoteprog_glass", MULTI|
-	    BACKEND|REMOTE|WRITABLE|GENERATED },
-	{ "multi_remoteprog_glass", MULTI|
-	    BACKEND|REMOTE|WRITABLE|GENERATED },
+	{ "multi_glass_remoteprog_glass", MULTI|REMOTE|
+	    BACKEND|TRANSACTIONS|POSITIONAL|WRITABLE|METADATA|VALUESTATS },
+	{ "multi_remoteprog_glass", MULTI|REMOTE|
+	    BACKEND|TRANSACTIONS|POSITIONAL|WRITABLE|METADATA|VALUESTATS },
 	{ "remoteprog_glass", REMOTE|
-	    BACKEND|TRANSACTIONS|POSITIONAL|WRITABLE|METADATA|VALUESTATS|
-	    GENERATED
+	    BACKEND|TRANSACTIONS|POSITIONAL|WRITABLE|METADATA|VALUESTATS
 	},
 	{ "remotetcp_glass", REMOTE|
-	    BACKEND|TRANSACTIONS|POSITIONAL|WRITABLE|METADATA|VALUESTATS|
-	    GENERATED
+	    BACKEND|TRANSACTIONS|POSITIONAL|WRITABLE|METADATA|VALUESTATS
 	},
 	{ "singlefile_glass", SINGLEFILE|
-	    BACKEND|POSITIONAL|VALUESTATS|COMPACT|PATH },
+	    BACKEND|POSITIONAL|METADATA|SPELLING|SYNONYMS|VALUESTATS|
+	    CHECK|COMPACT|PATH
+	},
 	{ NULL, 0 }
     };
 
@@ -125,8 +125,7 @@ TestRunner::do_tests_for_backend_(BackendManager* manager)
     const string& backend_name = manager->get_dbtype();
     if (use_backend(backend_name)) {
 	set_properties_for_backend(backend_name);
-	cout << "Running tests with backend \"" << backend_name << "\"..."
-	     << endl;
+	cout << "Running tests with backend \"" << backend_name << "\"...\n";
 	backendmanager = manager;
 	result_so_far = max(result_so_far, run());
 	backendmanager = NULL;
@@ -143,7 +142,7 @@ TestRunner::run_tests(int argc, char ** argv)
 	srcdir = test_driver::get_srcdir();
 	string datadir = srcdir + "/testdata/";
 
-	do_tests_for_backend(BackendManager(string()));
+	do_tests_for_backend(BackendManager(string(), "none"));
 
 #ifdef XAPIAN_HAS_INMEMORY_BACKEND
 	do_tests_for_backend(BackendManagerInMemory(datadir));
@@ -196,16 +195,16 @@ TestRunner::run_tests(int argc, char ** argv)
 #endif
     } catch (const std::exception& e) {
 	cerr << "\nTest harness failed with std::exception: " << e.what()
-	     << endl;
+	     << '\n';
 	return 1;
     } catch (const Xapian::Error &e) {
-	cerr << "\nTest harness failed with " << e.get_description() << endl;
+	cerr << "\nTest harness failed with " << e.get_description() << '\n';
 	return 1;
     } catch (const std::string &e) {
-	cerr << "\nTest harness failed with \"" << e << "\"" << endl;
+	cerr << "\nTest harness failed with \"" << e << "\"\n";
 	return 1;
     } catch (const char * e) {
-	cout << e << endl;
+	cout << e << '\n';
 	return 1;
     }
     return result_so_far;

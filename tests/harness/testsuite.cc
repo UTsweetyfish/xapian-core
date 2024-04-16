@@ -81,7 +81,7 @@ int verbose;
 static int vg_log_fd = -1;
 #endif
 
-#ifdef HAVE_SIGSETJMP
+#if HAVE_DECL_SIGSETJMP && HAVE_DECL_SIGLONGJMP
 # define SIGSETJMP(ENV, SAVESIGS) sigsetjmp(ENV, SAVESIGS)
 # define SIGLONGJMP(ENV, VAL) siglongjmp(ENV, VAL)
 # define SIGJMP_BUF sigjmp_buf
@@ -159,8 +159,8 @@ test_driver::get_srcdir()
     if (!file_exists(srcdir + '/' + srcfile + ".cc")) {
 	cout << argv0
 	     << ": srcdir is not in the environment and I can't guess it!\n"
-		"Run test programs using the runtest script - see HACKING for details"
-	     << endl;
+		"Run test programs using the runtest script - see HACKING "
+		"for details\n";
 	exit(1);
     }
     return srcdir;
@@ -237,7 +237,9 @@ class SignalRedirector {
 	active = true;
 	signum = 0;
 	sigaddr = NULL;
-	// SA_SIGINFO not universal (e.g. not present on Linux < 2.2 and Hurd).
+	// SA_SIGINFO is not universal (e.g. not present on Linux < 2.2 or
+	// older Hurd).  If we have it, we use it to report the address
+	// associated with the signal (for signals where that makes sense).
 #if defined HAVE_SIGACTION && defined SA_SIGINFO
 	struct sigaction sa;
 	sa.sa_sigaction = handle_sig;
@@ -467,7 +469,7 @@ test_driver::runtest(const test_desc *test)
 			// GCC and other compilers this may be an issue.
 			//
 			// See also:
-			// http://valgrind.org/docs/FAQ/#faq.reports
+			// https://valgrind.org/docs/manual/faq.html#faq.reports
 			//
 			// For now, just use runcount to rerun the test and see
 			// if more is leaked - hopefully this shouldn't give
@@ -620,7 +622,11 @@ test_driver::runtest(const test_desc *test)
 
 	// Caught a signal.
 	const char *signame = "SIGNAL";
+#if defined HAVE_SIGACTION && defined SA_SIGINFO
 	bool show_addr = true;
+#else
+	bool show_addr = false;
+#endif
 	switch (signum) {
 	    case SIGSEGV: signame = "SIGSEGV"; break;
 	    case SIGFPE: signame = "SIGFPE"; break;
@@ -697,32 +703,32 @@ test_driver::do_run_tests(vector<string>::const_iterator b,
 		case PASS:
 		    ++res.succeeded;
 		    if (verbose || !use_cr) {
-			out << col_green << " ok" << col_reset << endl;
+			out << col_green << " ok" << col_reset << '\n';
 		    } else {
 			out << "\r                                                                               \r";
 		    }
 		    break;
 		case XFAIL:
 		    ++res.xfailed;
-		    out << endl;
+		    out << '\n';
 		    break;
 		case FAIL:
 		    ++res.failed;
-		    out << endl;
+		    out << '\n';
 		    if (abort_on_error) {
 			throw "Test failed - aborting further tests";
 		    }
 		    break;
 		case XPASS:
 		    ++res.xpassed;
-		    out << endl;
+		    out << '\n';
 		    if (abort_on_error) {
 			throw "Test marked as XFAIL passed - aborting further tests";
 		    }
 		    break;
 		case SKIP:
 		    ++res.skipped;
-		    out << endl;
+		    out << '\n';
 		    // ignore the result of this test.
 		    break;
 	    }
@@ -734,9 +740,9 @@ test_driver::do_run_tests(vector<string>::const_iterator b,
 void
 test_driver::usage()
 {
-    cout << "Usage: " << argv0 << " [-v|--verbose] [-o|--abort-on-error] " << opt_help
-	 << "[TESTNAME]..." << endl;
-    cout << "       " << argv0 << " [-h|--help]" << endl;
+    cout << "Usage: " << argv0 << " [-v|--verbose] [-o|--abort-on-error] "
+	 << opt_help << "[TESTNAME]...\n"
+	    "       " << argv0 << " [-h|--help]\n";
     exit(1);
 }
 
@@ -777,9 +783,9 @@ test_driver::report(const test_driver::result &r, const string &desc)
 
 	if (r.skipped) {
 	    cout << ", " << col_yellow << r.skipped << col_reset
-		 << " skipped." << endl;
+		 << " skipped.\n";
 	} else {
-	    cout << "." << endl;
+	    cout << ".\n";
 	}
     }
 }

@@ -2,7 +2,7 @@ Source: xapian-core
 Section: libs
 Priority: optional
 Maintainer: Olly Betts <olly@survex.com>
-Standards-Version: 4.5.1
+Standards-Version: 4.7.0
 Build-Depends: debhelper-compat (= 12), zlib1g-dev, uuid-dev, dpkg (>= 1.16.1~)
 Homepage: https://xapian.org/
 Rules-Requires-Root: no

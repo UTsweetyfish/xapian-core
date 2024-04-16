@@ -62,7 +62,7 @@ make_sparse_db(Xapian::WritableDatabase &db, const string & s)
 	    last = strtoul(p + 1, &p, 10);
 	}
 	if (*p && *p != ' ') {
-	    tout << p - s.c_str() << endl;
+	    tout << p - s.c_str() << '\n';
 	    FAIL_TEST("Bad sparse db spec (expected space): " << s);
 	}
 	if (first > last) {
@@ -102,7 +102,7 @@ check_sparse_uid_terms(const string & path)
 }
 
 // With multi the docids in the shards change the behaviour.
-DEFINE_TESTCASE(compactnorenumber1, compact && generated && !multi) {
+DEFINE_TESTCASE(compactnorenumber1, compact && !multi) {
     string a = get_database_path("compactnorenumber1a", make_sparse_db,
 				 "5-7 24 76 987 1023-1027 9999 !9999");
     string a_uuid;
@@ -242,8 +242,7 @@ DEFINE_TESTCASE(compactmerge1, compact) {
     string outdbpath = get_compaction_output_path("compactmerge1out");
     rm_rf(outdbpath);
 
-    const string& dbtype = get_dbtype();
-    bool singlefile = startswith(dbtype, "singlefile_");
+    bool singlefile = startswith(get_dbtype(), "singlefile_");
     {
 	Xapian::Database db;
 	db.add_database(Xapian::Database(indbpath));
@@ -265,7 +264,7 @@ DEFINE_TESTCASE(compactmerge1, compact) {
 	// Check we actually got a single file out.
 	TEST(file_exists(outdbpath));
 	TEST_EQUAL(Xapian::Database::check(outdbpath, 0, &tout), 0);
-    } else if (startswith(dbtype, "multi_")) {
+    } else if (indb.size() > 1) {
 	// Can't check tables for a sharded DB.
 	TEST_EQUAL(Xapian::Database::check(outdbpath, 0, &tout), 0);
     } else {
@@ -282,11 +281,11 @@ DEFINE_TESTCASE(compactmerge1, compact) {
 		if (get_dbtype() == "chert") {
 		    suffix = "/record.DB";
 		} else {
-		    suffix = "/docdata." + dbtype;
+		    suffix = "/docdata." + get_dbtype();
 		}
 	    }
 	    tout.str(string());
-	    tout << "Trying suffix '" << suffix << "'" << endl;
+	    tout << "Trying suffix '" << suffix << "'\n";
 	    string arg = outdbpath;
 	    arg += suffix;
 	    TEST_EQUAL(Xapian::Database::check(arg, 0, &tout), 0);
@@ -311,7 +310,7 @@ make_multichunk_db(Xapian::WritableDatabase &db, const string &)
 
 // Test use of compact on a database which has multiple chunks for a term.
 // This is a regression test for ticket #427
-DEFINE_TESTCASE(compactmultichunks1, compact && generated) {
+DEFINE_TESTCASE(compactmultichunks1, compact) {
     string indbpath = get_database_path("compactmultichunks1in",
 					make_multichunk_db, "");
     string outdbpath = get_compaction_output_path("compactmultichunks1out");
@@ -337,8 +336,8 @@ DEFINE_TESTCASE(compactstub1, compact) {
     mkdir(stubpath, 0755);
     ofstream stub(stubpathfile);
     TEST(stub.is_open());
-    stub << "auto ../../" << get_database_path("apitest_simpledata") << endl;
-    stub << "auto ../../" << get_database_path("apitest_simpledata2") << endl;
+    stub << "auto ../../" << get_database_path("apitest_simpledata") << '\n';
+    stub << "auto ../../" << get_database_path("apitest_simpledata2") << '\n';
     stub.close();
 
     string outdbpath = get_compaction_output_path("compactstub1out");
@@ -362,8 +361,8 @@ DEFINE_TESTCASE(compactstub2, compact) {
     mkdir(".stub", 0755);
     ofstream stub(stubpath);
     TEST(stub.is_open());
-    stub << "auto ../" << get_database_path("apitest_simpledata") << endl;
-    stub << "auto ../" << get_database_path("apitest_simpledata2") << endl;
+    stub << "auto ../" << get_database_path("apitest_simpledata") << '\n';
+    stub << "auto ../" << get_database_path("apitest_simpledata2") << '\n';
     stub.close();
 
     string outdbpath = get_compaction_output_path("compactstub2out");
@@ -387,8 +386,8 @@ DEFINE_TESTCASE(compactstub3, compact) {
     mkdir(".stub", 0755);
     ofstream stub(stubpath);
     TEST(stub.is_open());
-    stub << "auto ../" << get_database_path("apitest_simpledata") << endl;
-    stub << "auto ../" << get_database_path("apitest_simpledata2") << endl;
+    stub << "auto ../" << get_database_path("apitest_simpledata") << '\n';
+    stub << "auto ../" << get_database_path("apitest_simpledata2") << '\n';
     stub.close();
 
     Xapian::doccount in_docs;
@@ -412,8 +411,8 @@ DEFINE_TESTCASE(compactstub4, compact) {
     mkdir(stubpath, 0755);
     ofstream stub(stubpathfile);
     TEST(stub.is_open());
-    stub << "auto ../../" << get_database_path("apitest_simpledata") << endl;
-    stub << "auto ../../" << get_database_path("apitest_simpledata2") << endl;
+    stub << "auto ../../" << get_database_path("apitest_simpledata") << '\n';
+    stub << "auto ../../" << get_database_path("apitest_simpledata2") << '\n';
     stub.close();
 
     Xapian::doccount in_docs;
@@ -452,7 +451,7 @@ make_missing_tables(Xapian::WritableDatabase &db, const string &)
     db.commit();
 }
 
-DEFINE_TESTCASE(compactmissingtables1, compact && generated) {
+DEFINE_TESTCASE(compactmissingtables1, compact) {
     string a = get_database_path("compactmissingtables1a",
 				 make_all_tables);
     string b = get_database_path("compactmissingtables1b",
@@ -492,7 +491,7 @@ make_all_tables2(Xapian::WritableDatabase &db, const string &)
 }
 
 /// Adds coverage for merging synonym table.
-DEFINE_TESTCASE(compactmergesynonym1, compact && generated) {
+DEFINE_TESTCASE(compactmergesynonym1, compact) {
     string a = get_database_path("compactmergesynonym1a",
 				 make_all_tables);
     string b = get_database_path("compactmergesynonym1b",
@@ -566,7 +565,7 @@ DEFINE_TESTCASE(compactempty1, compact) {
     }
 }
 
-DEFINE_TESTCASE(compactmultipass1, compact && generated) {
+DEFINE_TESTCASE(compactmultipass1, compact) {
     string outdbpath = get_compaction_output_path("compactmultipass1");
     rm_rf(outdbpath);
 
@@ -641,7 +640,7 @@ DEFINE_TESTCASE(compacttofd2, compact && !chert) {
 	TEST_EQUAL(errno, EBADF);
     }
 
-    fd = open(outdbpath.c_str(), O_RDONLY|O_BINARY, 0666);
+    fd = open(outdbpath.c_str(), O_RDONLY|O_BINARY);
     TEST(fd != -1);
 
     // Test that the database wasn't just written to the start of the file.

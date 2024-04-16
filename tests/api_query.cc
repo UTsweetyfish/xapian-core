@@ -82,6 +82,26 @@ DEFINE_TESTCASE(matchnothing1, !backend) {
     Xapian::Query q2(Xapian::Query::OP_AND,
 		     Xapian::Query("foo"), Xapian::Query::MatchNothing);
     TEST_STRINGS_EQUAL(q2.get_description(), "Query()");
+
+    Xapian::Query q3(Xapian::Query::OP_AND,
+		     Xapian::Query::MatchNothing, Xapian::Query("foo"));
+    TEST_STRINGS_EQUAL(q2.get_description(), "Query()");
+
+    Xapian::Query q4(Xapian::Query::OP_AND_MAYBE,
+		     Xapian::Query("foo"), Xapian::Query::MatchNothing);
+    TEST_STRINGS_EQUAL(q4.get_description(), "Query(foo)");
+
+    Xapian::Query q5(Xapian::Query::OP_AND_MAYBE,
+		     Xapian::Query::MatchNothing, Xapian::Query("foo"));
+    TEST_STRINGS_EQUAL(q5.get_description(), "Query()");
+
+    Xapian::Query q6(Xapian::Query::OP_AND_NOT,
+		     Xapian::Query("foo"), Xapian::Query::MatchNothing);
+    TEST_STRINGS_EQUAL(q6.get_description(), "Query(foo)");
+
+    Xapian::Query q7(Xapian::Query::OP_AND_NOT,
+		     Xapian::Query::MatchNothing, Xapian::Query("foo"));
+    TEST_STRINGS_EQUAL(q7.get_description(), "Query()");
 }
 
 DEFINE_TESTCASE(overload1, !backend) {
@@ -245,13 +265,17 @@ DEFINE_TESTCASE(overload1, !backend) {
  *
  *  Currently the OR-subquery case is supported, other operators aren't.
  */
-DEFINE_TESTCASE(possubqueries1, writable) {
-    Xapian::WritableDatabase db = get_writable_database();
-    Xapian::Document doc;
-    doc.add_posting("a", 1);
-    doc.add_posting("b", 2);
-    doc.add_posting("c", 3);
-    db.add_document(doc);
+DEFINE_TESTCASE(possubqueries1, backend) {
+    Xapian::Database db = get_database("possubqueries1",
+				       [](Xapian::WritableDatabase& wdb,
+					  const string&)
+				       {
+					   Xapian::Document doc;
+					   doc.add_posting("a", 1);
+					   doc.add_posting("b", 2);
+					   doc.add_posting("c", 3);
+					   wdb.add_document(doc);
+				       });
 
     Xapian::Query a_or_b(Xapian::Query::OP_OR,
 			 Xapian::Query("a"),
@@ -454,7 +478,7 @@ DEFINE_TESTCASE(wildcard1, backend) {
     const Xapian::Query::op o = Xapian::Query::OP_WILDCARD;
 
     for (auto&& test : wildcard1_testcases) {
-	tout << test.pattern << endl;
+	tout << test.pattern << '\n';
 	auto tend = test.terms + 4;
 	while (tend[-1] == NULL) --tend;
 	bool expect_exception = (tend - test.terms == 4 && tend[-1][0] == '\0');
@@ -521,7 +545,7 @@ DEFINE_TESTCASE(dualprefixwildcard1, backend) {
     Xapian::Query q(Xapian::Query::OP_SYNONYM,
 		    Xapian::Query(Xapian::Query::OP_WILDCARD, "fo"),
 		    Xapian::Query(Xapian::Query::OP_WILDCARD, "Sfo"));
-    tout << q.get_description() << endl;
+    tout << q.get_description() << '\n';
     Xapian::Enquire enq(db);
     enq.set_query(q);
     TEST_EQUAL(enq.get_mset(0, 5).size(), 2);
@@ -743,7 +767,7 @@ gen_subdbwithoutpos1_db(Xapian::WritableDatabase& db, const string&)
     db.add_document(doc);
 }
 
-DEFINE_TESTCASE(subdbwithoutpos1, generated) {
+DEFINE_TESTCASE(subdbwithoutpos1, backend) {
     XFAIL_FOR_BACKEND("remote",
 		      "Known but obscure remote bug which doesn't justify "
 		      "protocol version bump");
@@ -845,6 +869,15 @@ DEFINE_TESTCASE(emptynot1, backend) {
     enq.set_query(query);
     Xapian::MSet mset = enq.get_mset(0, 10);
     TEST_EQUAL(mset.size(), 1);
+    // Essentially the same test but with a term which doesn't match anything
+    // instead of a range.
+    query = Xapian::Query("document") & Xapian::Query("api");
+    query = Xapian::Query(query.OP_AND_NOT,
+			  query,
+			  Xapian::Query("nosuchterm"));
+    enq.set_query(query);
+    mset = enq.get_mset(0, 10);
+    TEST_EQUAL(mset.size(), 1);
 }
 
 // Similar case to emptynot1 but for OP_AND_MAYBE.  This case wasn't failing,
@@ -861,6 +894,15 @@ DEFINE_TESTCASE(emptymaybe1, backend) {
 			  Xapian::Query(Xapian::Query::OP_VALUE_GE, 1234, "x"));
     enq.set_query(query);
     Xapian::MSet mset = enq.get_mset(0, 10);
+    TEST_EQUAL(mset.size(), 1);
+    // Essentially the same test but with a term which doesn't match anything
+    // instead of a range.
+    query = Xapian::Query("document") & Xapian::Query("api");
+    query = Xapian::Query(query.OP_AND_MAYBE,
+			  query,
+			  Xapian::Query("nosuchterm"));
+    enq.set_query(query);
+    mset = enq.get_mset(0, 10);
     TEST_EQUAL(mset.size(), 1);
 }
 
